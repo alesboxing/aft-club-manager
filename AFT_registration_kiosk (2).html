@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AFT · Регистрация участника</title>
+<style>
+:root{--ink:#14213d;--paper:#f2f4f8;--card:#fff;--red:#c8102e;--blue:#1d4ed8;--line:#d5dae3;--mute:#5b6577;--ok:#15803d;--bad:#b91c1c}
+@media(prefers-color-scheme:dark){:root{--ink:#eef1f7;--paper:#0f1626;--card:#18223a;--line:#2d3a57;--mute:#9aa6bd;--ok:#4ade80;--bad:#f87171}}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{background:var(--paper);color:var(--ink);font:20px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.bar{height:14px;background:linear-gradient(90deg,var(--red) var(--p,0%),var(--line) var(--p,0%))}
+.bar::after{content:"";display:block;height:14px;width:34%;margin-left:auto;background:var(--blue);opacity:.0}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;gap:12px}
+.top b{font-size:22px;letter-spacing:.2px}.top small{color:var(--mute);font-size:15px}
+.gear{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:10px 14px;font:inherit;font-size:16px}
+main{max-width:760px;margin:0 auto;padding:8px 22px 40px}
+.q{font-size:32px;font-weight:800;line-height:1.15;margin:18px 0 6px}
+.hint{color:var(--mute);font-size:18px;margin:0 0 16px}
+input[type=text],input[type=tel],input[type=password],textarea{width:100%;font:inherit;font-size:30px;font-weight:600;padding:16px 18px;border-radius:14px;border:3px solid var(--line);background:var(--card);color:var(--ink);outline:none}
+input:focus,textarea:focus{border-color:var(--blue)}
+.err{min-height:28px;color:var(--bad);font-weight:700;font-size:19px;margin:10px 2px}
+.sug{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 0}
+.sug button,.ch button{font:inherit;font-size:22px;font-weight:700;padding:14px 20px;border-radius:14px;border:3px solid var(--line);background:var(--card);color:var(--ink)}
+.sug button.fz{border-color:var(--blue)}
+.ch{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.ch button{padding:22px 10px}.ch button.on{border-color:var(--blue);background:var(--blue);color:#fff}
+.nav{display:flex;gap:14px;margin-top:22px}
+.nav button{flex:1;font:inherit;font-size:26px;font-weight:800;padding:20px;border-radius:16px;border:0}
+.back{background:var(--card);color:var(--ink);border:3px solid var(--line)!important;flex:.5!important}
+.next{background:var(--red);color:#fff}.next.ok{background:var(--ok)}
+.sum{background:var(--card);border:2px solid var(--line);border-radius:16px;overflow:hidden}
+.sum div{display:flex;justify-content:space-between;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);font-size:21px}
+.sum div:last-child{border:0}.sum span{color:var(--mute)}.sum b{text-align:right}
+.sum a{color:var(--blue);font-size:17px;margin-left:10px;text-decoration:underline}
+.big{font-size:56px;font-weight:900;margin:10px 0}
+.conf{background:var(--card);border:3px solid var(--blue);border-radius:16px;padding:16px 18px;margin-top:14px}
+.conf p{margin:0 0 12px;font-weight:700}.conf .row{display:flex;gap:10px;flex-wrap:wrap}
+.conf button{font:inherit;font-size:21px;font-weight:700;padding:12px 16px;border-radius:12px;border:2px solid var(--line);background:var(--paper);color:var(--ink)}
+.ov{position:fixed;inset:0;background:var(--paper);overflow:auto;padding:20px 22px calc(40px + env(safe-area-inset-bottom));display:none;z-index:9}
+.ov .in{max-width:900px;margin:0 auto}
+.ov table{width:100%;border-collapse:collapse;font-size:17px}.ov td,.ov th{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+.ov .btns{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.ov .btns button,.ov td button{font:inherit;font-size:17px;padding:12px 16px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+.ov .btns .pri{background:var(--blue);color:#fff;border-color:var(--blue)}
+:focus-visible{outline:4px solid var(--blue);outline-offset:2px}
+</style></head><body>
+<div class="bar" id="bar"></div>
+<div class="top"><div><b>Регистрация участника</b><br><small id="cnt"></small></div><button class="gear" id="gear">Секретарь</button></div>
+<main id="app"></main>
+<div class="ov" id="ov"><div class="in" id="ovin"></div></div>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* ---------- хранилище (с запасом в памяти, если localStorage недоступен) ---------- */
+const mem={};
+const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:d):JSON.parse(v)}catch(e){return k in mem?mem[k]:d}};
+const sv=(k,v)=>{mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let records=ld('aft_reg_records',[]), dict=ld('aft_reg_dict',{ln:[],fn:[],mn:[],city:[],club:[],coach:[]}), clubInfo=ld('aft_reg_clubinfo',{}), pin=ld('aft_reg_pin','');
+const save=()=>{sv('aft_reg_records',records);sv('aft_reg_dict',dict);sv('aft_reg_clubinfo',clubInfo)};
+/* ---------- нормализация ---------- */
+const nrm=s=>String(s||'').toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ').trim();
+const cap=w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();
+const titleName=s=>s.trim().replace(/\s+/g,' ').split(' ').map(w=>w.split('-').map(cap).join('-')).join(' ');
+const titleFree=s=>s.trim().replace(/\s+/g,' ').split(' ').map(w=>/^[A-Za-z]{2,3}$/.test(w)?w.toUpperCase():(w.length>1&&w===w.toUpperCase()&&/[A-ZА-ЯЁ]/.test(w))?w:cap(w)).join(' ');
+function wParse(d){if(!d)return 0;if(d.length<=2)return +d;if(d.length===3)return +d<=150?+d:+d/10;return +d/10}
+function fmtW(w){return w.toFixed(1).replace('.',',')}
+function info(c){const x=clubInfo[nrm(c)]||{};return {cities:x.cities||(x.city?[x.city]:[]),coaches:x.coaches||(x.coach?[x.coach]:[])}}
+function lev(a,b){if(Math.abs(a.length-b.length)>3)return 9;const d=[];for(let i=0;i<=a.length;i++)d[i]=[i];for(let j=1;j<=b.length;j++)d[0][j]=j;
+ for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length]}
+const nameOk=s=>/^[A-Za-zА-Яа-яЁё]+(?:[-' ][A-Za-zА-Яа-яЁё]+)*$/.test(s)&&s.replace(/[^A-Za-zА-Яа-яЁё]/g,'').length>=2;
+function parseDate(t){const m=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t);if(!m)return null;const d=+m[1],mo=+m[2],y=+m[3],dt=new Date(y,mo-1,d);
+ if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d)return null;return {d,mo,y,iso:y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0'),age:ageOf(dt)}}
+function ageOf(dt){const n=new Date();let a=n.getFullYear()-dt.getFullYear();if(n.getMonth()<dt.getMonth()||(n.getMonth()===dt.getMonth()&&n.getDate()<dt.getDate()))a--;return a}
+/* ---------- пол по ФИО: только явные признаки, иначе молчим ---------- */
+const FEM=new Set('анастасия мария анна елена ольга наталья татьяна екатерина ирина светлана юлия александра виктория дарья полина ксения валерия вероника алина алиса арина диана кристина милана софия софья ульяна яна злата василиса евгения маргарита галина любовь надежда людмила оксана лилия карина камилла амина аиша айша мадина зарина эльмира диляра асият айшат патимат хадижат заира зулейха зухра адель нинель рахиль элина эвелина лейла лиана регина ангелина амелия мирослава таисия варвара вера валентина лариса инна нелли жанна яна'.split(' '));
+const MAL=new Set('никита илья данила савва лука фома кузьма гавриил андрей дмитрий сергей алексей артем артём георгий игорь николай валерий евгений юрий дамир тимур рустам руслан магомед мухаммед мухамед ахмед ахмад муса иса исса ибрагим абдулла саид зия'.split(' '));
+function gScore(f){ // + женский, − мужской
+ const ln=nrm(f.ln),fn=nrm(f.fn),mn=nrm(f.mn);let sc=0;
+ if(/(овна|евна|ична|инична|кызы)$/.test(mn))sc+=3;else if(/(ович|евич|ьич|оглы)$/.test(mn))sc-=3;
+ if(fn){if(FEM.has(fn))sc+=2;else if(MAL.has(fn))sc-=2;else if(/[ая]$/.test(fn))sc+=2;else if(/[бвгджзклмнпрстфхцчшщйь]$/.test(fn)&&fn.length>2)sc-=1}
+ if(/(ова|ева|ёва|ина|ына|ская|цкая|ая)$/.test(ln))sc+=1;else if(/(ов|ев|ёв|ин|ын|ский|цкий|ой|ий)$/.test(ln))sc-=1;
+ return sc}
+function gMis(rr){const f=rr||rec;if(!f.gender)return null;const sc=gScore(f);if(f.gender==='M'&&sc>=2)return 'F';if(f.gender==='F'&&sc<=-2)return 'M';return null}
+/* ---------- шаги ---------- */
+const RANKS=['Без разряда','3 юн.','2 юн.','1 юн.','3 взр.','2 взр.','1 взр.','КМС','МС'];
+const S=[
+{k:'gender',q:'Выберите пол',h:'Сначала пол: система проверит, подходят ли к нему фамилия и имя.',t:'choice',o:[['M','Мужской'],['F','Женский']]},
+{k:'ln',q:'Фамилия',h:'Как в паспорте. Регистр не важен.',t:'name',dk:'ln'},
+{k:'fn',q:'Имя',h:'Как в паспорте.',t:'name',dk:'fn'},
+{k:'mn',q:'Отчество',h:'Если отчества нет — нажмите «Нет отчества».',t:'name',dk:'mn',skip:'Нет отчества'},
+{k:'bd',q:'Дата рождения',h:'Только цифры: день, месяц, год. Точки поставятся сами. Например 15032012.',t:'date'},
+{k:'weight',q:'Вес по взвешиванию, кг',h:'Тот, что записал судья. Цифры без запятой: 463 — это 46,3 кг, а 46 — это 46 кг.',t:'weight'},
+{k:'club',q:'Клуб',h:'Начните писать — система подскажет, если клуб уже есть.',t:'free',dk:'club'},
+{k:'city',q:'Город (команда)',h:'Город, за который выступаете.',t:'free',dk:'city'},
+{k:'coach',q:'Тренер',h:'Фамилия Имя Отчество тренера.',t:'free',dk:'coach',coach:1},
+{k:'rank',q:'Спортивный разряд',t:'choice',o:RANKS.map(r=>[r,r])},
+{k:'years',q:'Сколько лет занимаетесь боксом',h:'Полных лет. Если меньше года — 0.',t:'int',max:40},
+{k:'bouts',q:'Сколько боёв провели',h:'Если боёв не было — 0. Если счёт боям не ведёте — нажмите кнопку внизу.',t:'int',max:999,skip:'Счёт боям не веду'},
+{k:'wins',q:'Сколько боёв выиграли',h:'Не больше, чем проведено.',t:'int',max:999},
+{k:'ib',q:'Из них международных встреч',h:'Сколько из проведённых боёв были международными встречами. Не было — 0.',t:'int',max:999},
+{k:'iw',q:'Сколько международных встреч выиграли',h:'Не больше, чем международных встреч. Не было — 0.',t:'int',max:999},
+{k:'ach',q:'Лучшие достижения',h:'Регалии, которые зачитает информатор. Например: победитель первенства России; призёр международного турнира Грекова; призёр Олимпийских игр.',t:'text',skip:'Нет достижений'}
+];
+const LABEL={ln:'Фамилия',fn:'Имя',mn:'Отчество',gender:'Пол',bd:'Дата рождения',weight:'Вес, кг',club:'Клуб',city:'Город',coach:'Тренер',rank:'Разряд',years:'Занимается, лет',bouts:'Боёв',wins:'Побед',ib:'Международных встреч',iw:'Побед в международных',ach:'Достижения'};
+let i=0, rec={}, review=false, editBack=false, view='step';
+const show=(h)=>{$('#app').innerHTML=h};
+const setBar=()=>{$('#bar').style.setProperty('--p',(view==='step'?Math.round(i/S.length*100):100)+'%')};
+const cnt=()=>{$('#cnt').textContent='Зарегистрировано сегодня: '+records.length};
+function fmt(k,v){if((k==='bouts'||k==='wins'||k==='ib'||k==='iw')&&rec.noRec)return 'не ведёт счёт';if(k==='gender')return v==='M'?'Мужской':'Женский';return v===''||v==null?'—':v}
+/* ---------- вывод шага ---------- */
+function render(){
+ view='step';setBar();cnt();
+ if(i>=S.length){return renderReview()}
+ const s=S[i];let h='<div class="q">'+esc(s.q)+'</div><div class="hint">'+esc(s.h||'')+'</div>';
+ if(s.t==='choice'){h+='<div class="ch">'+s.o.map(o=>'<button data-v="'+esc(o[0])+'" class="'+(rec[s.k]===o[0]?'on':'')+'">'+esc(o[1])+'</button>').join('')+'</div><div class="err" id="err"></div>'}
+ else{
+  const mode=(s.t==='date'||s.t==='weight'||s.t==='int')?'tel':'text';
+  h+=(s.t==='text'?'<textarea id="in" rows="2" maxlength="160" autocomplete="off">':'<input id="in" type="'+mode+'" '+(mode==='tel'?'inputmode="'+'numeric'+'" ':'')+'autocomplete="off" autocapitalize="words" spellcheck="false" maxlength="70" value="')+esc(rec[s.k]==null?'':rec[s.k])+(s.t==='text'?'</textarea>':'">');
+  h+='<div class="err" id="err"></div><div class="sug" id="sug"></div><div id="cf"></div>';
+ }
+ h+='<div class="nav">'+(i>0&&!editBack?'<button class="back" id="bk">Назад</button>':'')+(s.t==='choice'?'':'<button class="next" id="nx">Дальше</button>')+'</div>';
+ if(s.skip&&s.t!=='choice')h+='<div class="sug"><button id="sk">'+esc(s.skip)+'</button></div>';
+ show(h);
+ const inp=$('#in');
+ if(inp){inp.focus();inp.addEventListener('input',()=>onInput(s,inp));inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&s.t!=='text'){e.preventDefault();next()}});onInput(s,inp,true)}
+ document.querySelectorAll('.ch button').forEach(b=>b.onclick=()=>{rec[s.k]=b.dataset.v;advance()});
+ if($('#nx'))$('#nx').onclick=next;if($('#bk'))$('#bk').onclick=()=>{i--;render()};
+ if($('#sk'))$('#sk').onclick=()=>{rec[s.k]='';if(s.k==='bouts'){rec.noRec=1;rec.wins='';rec.ib='';rec.iw=''}advance()};
+ if(s.k==='city'||s.k==='coach')showKnown(s);
+}
+function showKnown(s){const ci=info(rec.club),arr=s.k==='city'?ci.cities:ci.coaches;if(!arr.length)return;
+ $('#sug').innerHTML='<span class="hint" style="width:100%;margin:0">Уже были от этого клуба. Нажмите, если подходит, или впишите другое:</span>'+arr.map(x=>'<button data-x="'+esc(x)+'">'+esc(x)+'</button>').join('');
+ $('#sug').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('#in').value=b.dataset.x;$('#sug').innerHTML='';$('#in').focus()})}
+function onInput(s,inp,quiet){
+ let v=inp.value;
+ if(s.t==='date'){const d=v.replace(/\D/g,'').slice(0,8);let o=d;if(d.length>4)o=d.slice(0,2)+'.'+d.slice(2,4)+'.'+d.slice(4);else if(d.length>2)o=d.slice(0,2)+'.'+d.slice(2);inp.value=o;
+  const p=parseDate(o);$('#sug').innerHTML=p?'<span class="hint">Полных лет: <b>'+p.age+'</b></span>':'';}
+ else if(s.t==='weight'||s.t==='int'){inp.value=v.replace(/\D/g,'').slice(0,s.t==='weight'?4:3);if(s.t==='weight'){const w=wParse(inp.value);$('#sug').innerHTML=w?'<div class="big">'+fmtW(w)+' кг</div>':''}}
+ else if(s.t==='name'){inp.value=v.replace(/[^A-Za-zА-Яа-яЁё\-' ]/g,'')}
+ if(!quiet)$('#err').textContent='';
+ if(s.dk){suggest(s,inp.value)}
+}
+function suggest(s,v){
+ const box=$('#sug');const q=nrm(v);if(!q){box.innerHTML='';if(s.k==='city'||s.k==='coach')showKnown(s);return}
+ const list=dict[s.dk]||[];
+ let m=list.filter(x=>nrm(x).startsWith(q));m=m.concat(list.filter(x=>!m.includes(x)&&nrm(x).includes(q))).slice(0,6);
+ let fz=[];if(!m.length&&q.length>=3)fz=list.filter(x=>lev(nrm(x),q)<=2).slice(0,3);
+ box.innerHTML=m.map(x=>'<button data-x="'+esc(x)+'">'+esc(x)+'</button>').join('')+fz.map(x=>'<button class="fz" data-x="'+esc(x)+'">Возможно: '+esc(x)+'</button>').join('');
+ box.querySelectorAll('button').forEach(b=>b.onclick=()=>{$('#in').value=b.dataset.x;box.innerHTML='';$('#in').focus()});
+}
+/* ---------- проверка и переход ---------- */
+function fail(m){$('#err').textContent=m;const e=$('#in');if(e)e.focus();return false}
+function next(){
+ const s=S[i],inp=$('#in');let v=(inp.value||'').trim();
+ if(s.t==='name'){v=titleName(v);if(!nameOk(v))return fail('Введите '+s.q.toLowerCase()+' буквами, не короче 2 букв.');
+  if(s.dk&&!matchDict(s,v))return}
+ else if(s.t==='date'){const p=parseDate(v);if(!p)return fail('Дата неверная. Введите день, месяц и год: 15032012.');
+  if(p.age<7||p.age>45)return fail('Возраст '+p.age+' лет выглядит неверно. Проверьте год рождения.');rec.birthDate=p.iso;rec.birthYear=p.y;rec.age=p.age}
+ else if(s.t==='weight'){const w=wParse(v.replace(/\D/g,''));if(!w)return fail('Введите вес цифрами, например 463 для 46,3 кг.');if(w<15||w>150)return fail('Вес должен быть от 15 до 150 кг. Получилось: '+fmtW(w)+'.');v=fmtW(w)}
+ else if(s.t==='int'){if(s.k==='bouts')rec.noRec=0;if(v==='')return fail('Введите число. Если нет — поставьте 0.');const n=+v;if(n>s.max)return fail('Число слишком большое. Проверьте.');
+  if(s.k==='years'&&n>rec.age)return fail('Стаж не может быть больше возраста ('+rec.age+').');
+  if(s.k==='wins'&&n>+rec.bouts)return fail('Побед не может быть больше, чем боёв ('+rec.bouts+').');
+  if(s.k==='ib'&&n>+rec.bouts)return fail('Международных встреч не больше, чем боёв ('+rec.bouts+').');
+  if(s.k==='iw'&&n>+rec.ib)return fail('Побед в международных не больше, чем международных встреч ('+rec.ib+').');
+  if(s.k==='iw'&&n>+rec.wins)return fail('Побед в международных не больше всех побед ('+rec.wins+').');v=String(n)}
+ else if(s.t==='free'){v=s.k==='coach'?titleName(v):titleFree(v);if(v.length<2)return fail('Заполните поле.');if(s.k==='coach'&&!nameOk(v))return fail('Укажите тренера буквами: Фамилия Имя Отчество.');if(!matchDict(s,v))return}
+ else if(s.t==='text'){v=v.replace(/\s+/g,' ');if(!v)return fail('Опишите достижения или нажмите «Нет достижений».')}
+ rec[s.k]=v;if(!rec._gAck&&(s.k==='ln'||s.k==='fn'||s.k==='mn')){const g=gMis();if(g)return askGender(g,'#cf',advance)}advance()}
+/* имя в словаре? если нет, но есть похожее — просим подтвердить, чтобы не плодить дубли */
+function matchDict(s,v){
+ const list=dict[s.dk]||[],q=nrm(v);const exact=list.find(x=>nrm(x)===q);
+ if(exact){S[i]._v=exact;$('#in').value=exact;return fixAndGo(s,exact)}
+ if(s.dk==='ln'||s.dk==='fn'||s.dk==='mn')return fixAndGo(s,v);
+ const sim=list.filter(x=>lev(nrm(x),q)<=2&&x!==v).slice(0,3);
+ if(!sim.length||S[i]._ok===q)return fixAndGo(s,v);
+ $('#cf').innerHTML='<div class="conf"><p>Такого «'+esc(v)+'» нет в списке. Это одно и то же?</p><div class="row">'+sim.map(x=>'<button data-x="'+esc(x)+'">Да, это «'+esc(x)+'»</button>').join('')+'<button id="nw">Нет, это новое</button></div></div>';
+ $('#cf').querySelectorAll('button[data-x]').forEach(b=>b.onclick=()=>{rec[s.k]=b.dataset.x;advance()});
+ $('#nw').onclick=()=>{S[i]._ok=q;next()};return false}
+function fixAndGo(s,v){return true}
+function askGender(g,sel,go){const w=g==='F'?'женское':'мужское',to=g==='F'?'Женский':'Мужской';
+ $(sel).innerHTML='<div class="conf"><p>Внимание: «'+esc([rec.ln,rec.fn,rec.mn].filter(Boolean).join(' '))+'» похоже на '+w+' имя, а выбран другой пол. Проверьте.</p><div class="row"><button id="g1">Изменить пол на «'+to+'»</button><button id="g2">Нет, пол выбран верно</button></div></div>';
+ $('#g1').onclick=()=>{rec.gender=g;go()};$('#g2').onclick=()=>{rec._gAck=1;go()}}
+function advance(){if(editBack){editBack=false;i=S.length}else{i++;while(S[i]&&rec.noRec&&['wins','ib','iw'].includes(S[i].k))i++}render()}
+/* ---------- проверка и сохранение ---------- */
+function renderReview(){
+ if(!rec.noRec){const mk=['wins','ib','iw'].find(x=>rec[x]===''||rec[x]==null);if(mk){i=S.findIndex(x=>x.k===mk);editBack=true;return render()}}
+ view='rev';setBar();
+ let rows=S.map((s,ix)=>'<div><span>'+LABEL[s.k]+'</span><b>'+esc(fmt(s.k,rec[s.k]))+(s.k==='bd'?'':'')+' <a href="#" data-i="'+ix+'">исправить</a></b></div>').join('');
+ rows=rows.replace('>'+LABEL.bd+'<','>'+LABEL.bd+'<');
+ show('<div class="q">Проверьте данные</div><div class="hint">Сверьте с карточкой и протоколом взвешивания. Всё верно — позовите секретаря для подтверждения.</div><div class="sum">'+rows+'</div>'
+  +'<div id="cf"></div><div class="q" style="font-size:24px;margin-top:22px">Подтверждение секретаря</div><input id="pn" type="password" inputmode="numeric" maxlength="4" placeholder="PIN секретаря" autocomplete="off" style="max-width:320px"><div class="err" id="err"></div>'
+  +'<div class="nav"><button class="back" id="bk">Назад</button><button class="next ok" id="sv">Зарегистрировать</button></div>');
+ document.querySelectorAll('.sum a').forEach(a=>a.onclick=e=>{e.preventDefault();i=+a.dataset.i;editBack=true;render()});
+ $('#bk').onclick=()=>{i=S.length-1;render()};
+ if(!rec._gAck){const g=gMis();if(g)askGender(g,'#cf',renderReview)}
+ $('#sv').onclick=commit;$('#pn').addEventListener('keydown',e=>{if(e.key==='Enter')commit()});
+}
+function commit(){
+ if($('#pn').value!==pin){$('#err').textContent='Неверный PIN. Подтвердить может только секретарь.';$('#pn').value='';return}
+ if(!rec._gAck&&gMis()){$('#err').textContent='Имя и пол не совпадают. Исправьте пол или подтвердите, что он верный.';return}
+ const key=nrm(rec.ln+' '+rec.fn)+'|'+rec.birthDate;
+ if(records.some(r=>nrm(r.lastName+' '+r.firstName)+'|'+r.birthDate===key)){$('#err').textContent='Такой спортсмен уже зарегистрирован. Если это ошибка — исправьте в панели секретаря.';return}
+ if(!rec.noRec&&(+rec.wins>+rec.bouts||+rec.ib>+rec.bouts||+rec.iw>+rec.ib||+rec.iw>+rec.wins)){$('#err').textContent='Числа боёв и побед не сходятся. Исправьте строки с боями и победами.';return}
+ const fio=[rec.ln,rec.fn,rec.mn].filter(Boolean).join(' ');
+ const r={id:'reg'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),lastName:rec.ln,firstName:rec.fn,middleName:rec.mn||'',fio,gender:rec.gender,birthDate:rec.birthDate,birthYear:rec.birthYear,
+  weight:rec.weight.replace(',','.'),club:rec.club,city:rec.city,coach:rec.coach,rank:rec.rank,yearsBoxing:+rec.years,bouts:rec.noRec?null:+rec.bouts,wins:rec.noRec?null:+rec.wins,intlBouts:rec.noRec?null:+rec.ib,intlWins:rec.noRec?null:+rec.iw,noRecord:!!rec.noRec,achievements:rec.ach||'',registeredAt:new Date().toISOString()};
+ records.push(r);learn(r);save();cnt();
+ view='done';$('#bar').style.setProperty('--p','100%');
+ show('<div class="q">Готово</div><div class="big">'+esc(rec.ln+' '+rec.fn)+'</div><div class="hint">Вы зарегистрированы под номером '+records.length+'. Карточку с отметкой веса сдайте судье-информатору.</div><div class="nav"><button class="next ok" id="nn">Следующий спортсмен</button></div>');
+ $('#nn').onclick=reset;setTimeout(()=>{if(view==='done')reset()},9000);
+}
+function learn(r){const add=(k,v)=>{if(v&&!dict[k].some(x=>nrm(x)===nrm(v)))dict[k].push(v)};
+ add('ln',r.lastName);add('fn',r.firstName);add('mn',r.middleName);add('city',r.city);add('club',r.club);add('coach',r.coach);const ci=info(r.club);if(!ci.cities.includes(r.city))ci.cities.push(r.city);if(!ci.coaches.includes(r.coach))ci.coaches.push(r.coach);clubInfo[nrm(r.club)]=ci}
+function reset(){rec={};i=0;editBack=false;S.forEach(s=>{delete s._ok});render()}
+/* ---------- панель секретаря ---------- */
+function overlay(h){$('#ovin').innerHTML=h;$('#ov').style.display='block'}
+function closeOv(){$('#ov').style.display='none'}
+$('#gear').onclick=()=>{overlay('<h2>Секретарь</h2><input id="ap" type="password" inputmode="numeric" maxlength="4" placeholder="PIN" style="max-width:260px"><div class="err" id="err"></div><div class="btns"><button class="pri" id="ok">Войти</button><button id="cl">Закрыть</button></div>');
+ $('#cl').onclick=closeOv;$('#ok').onclick=()=>{if($('#ap').value===pin)admin();else{$('#err').textContent='Неверный PIN.';$('#ap').value=''}};$('#ap').focus()};
+function admin(){
+ overlay('<h2>Секретарь · зарегистрировано: '+records.length+'</h2><div class="btns"><button class="pri" id="ex">Скачать JSON для основного файла</button><button id="dc">Загрузить справочник клубов</button><button id="np">Сменить PIN</button><button id="cl">Закрыть</button></div>'
+ +'<table><tr><th>№</th><th>ФИО</th><th>Пол</th><th>Дата рожд.</th><th>Вес</th><th>Клуб</th><th></th></tr>'+records.map((r,n)=>'<tr><td>'+(n+1)+'</td><td>'+esc(r.fio)+'</td><td>'+(r.gender==='F'?'Ж':'М')+(gMis({gender:r.gender,ln:r.lastName,fn:r.firstName,mn:r.middleName})?' ⚠':'')+' <button data-g="'+n+'">сменить</button></td><td>'+esc(r.birthDate)+'</td><td>'+esc(r.weight)+'</td><td>'+esc(r.club)+'</td><td><button data-d="'+n+'">Удалить</button></td></tr>').join('')+'</table><input type="file" id="fl" accept=".json" hidden>');
+ $('#cl').onclick=()=>{closeOv();render()};
+ $('#ex').onclick=exportJSON;$('#dc').onclick=()=>$('#fl').click();
+ $('#np').onclick=()=>{const p=prompt('Новый PIN (4 цифры)');if(p&&/^\d{4}$/.test(p)){pin=p;sv('aft_reg_pin',pin);alert('PIN изменён')}else if(p)alert('PIN должен быть из 4 цифр')};
+ document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const x=records[+b.dataset.g];x.gender=x.gender==='M'?'F':'M';save();admin()});
+ document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{const n=+b.dataset.d;if(confirm('Удалить «'+records[n].fio+'»?')){records.splice(n,1);save();admin()}});
+ $('#fl').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(String(rd.result).replace(/^\uFEFF/,''));const L=d.records||d.athletes||[];let a=0;
+  const add=(k,v)=>{v=(v||'').toString().trim();if(v&&!dict[k].some(x=>nrm(x)===nrm(v))){dict[k].push(v);a++}};
+  L.forEach(x=>{add('club',x.club);add('coach',x.coach);add('city',x.city||x.region);if(x.lastName)add('ln',x.lastName);if(x.club){const ci=info(x.club);if(x.city&&!ci.cities.includes(x.city))ci.cities.push(x.city);if(x.coach&&!ci.coaches.includes(x.coach))ci.coaches.push(x.coach);clubInfo[nrm(x.club)]=ci}});
+  save();alert('Добавлено в подсказки: '+a)}catch(err){alert('Не удалось прочитать файл')}};rd.readAsText(f,'utf-8')};
+}
+function exportJSON(){
+ const d={format:'aft-registration',version:1,exportedAt:new Date().toISOString(),count:records.length,records};
+ const b=new Blob([JSON.stringify(d,null,1)],{type:'application/json'}),a=document.createElement('a'),t=new Date(),p=n=>String(n).padStart(2,'0');
+ a.href=URL.createObjectURL(b);a.download='aft_registration_'+t.getFullYear()+p(t.getMonth()+1)+p(t.getDate())+'_'+p(t.getHours())+p(t.getMinutes())+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+/* ---------- первый запуск: PIN ---------- */
+function setup(){
+ view='setup';show('<div class="q">Задайте PIN секретаря</div><div class="hint">4 цифры. Им вы подтверждаете каждого спортсмена и входите в панель. Запомните его.</div><input id="in" type="password" inputmode="numeric" maxlength="4" autocomplete="off" style="max-width:260px"><div class="err" id="err"></div><div class="nav"><button class="next" id="nx">Сохранить PIN</button></div>');
+ $('#nx').onclick=()=>{const v=$('#in').value;if(!/^\d{4}$/.test(v)){$('#err').textContent='PIN — ровно 4 цифры.';return}pin=v;sv('aft_reg_pin',pin);render()}}
+cnt();pin?render():setup();
+</script></body></html>
