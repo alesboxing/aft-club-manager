@@ -4826,8 +4826,12 @@ function scoreRoundCardBlock(roundNo=1){
 }
 function scoreRoundCardDocHTML(){
  /* v474: раньше всегда 4 карточки (при 5 раундах пятой не было). Теперь по 4 карточки на страницу, раундов — сколько в паспорте; для ≤4 раундов вывод прежний */
+ /* v498 (№4-fix): карточка = раунд, повторов нет. v499: R<=4 тоже без повторов. Для R<=4 — ровно 4 карточки, как раньше
+   (неполный лист по традиции добирается первыми раундами: 1,1,1,1 / 1,2,1,2 / 1,2,3,1).
+   Для R>4 на странице до 4 карточек, последняя может быть неполной: 5 → [1,2,3,4]+[5].
+   Раньше при R=5 вторая страница повторяла раунды 1,2,3. */
  const R=getRoundsCount(),pages=Math.ceil(R/4);let out='';
- for(let p=0;p<pages;p++){const cards=Array.from({length:4},(_,i)=>R<=4?(i%R)+1:(p*4+i<R?p*4+i+1:((p*4+i)%R)+1));out+=docPageClass(true,`<div class="scorecards-grid">${cards.map(scoreRoundCardBlock).join('')}</div>`)}
+ for(let p=0;p<pages;p++){const cards=Array.from({length:4},(_,i)=>p*4+i+1).filter(n=>n<=R); /* v499: ровно R карточек, без повторов раундов (любительский бокс — 3 раунда) */out+=docPageClass(true,`<div class="scorecards-grid">${cards.map(scoreRoundCardBlock).join('')}</div>`)}
  return out;
 }
 function judgeProtocolBlock(name='',idx=1){return `<div class="judge-block"><div class="judge-block-title">Судья № ${idx} ${docSafe(name||'')}</div><table><tr><th><span class="official-red">Красный</span><br>очки</th><th>Раунд</th><th><span class="official-blue">Синий</span><br>очки</th></tr>${scoreRoundRowsHTML(r=>`<td></td><td>${r}</td><td></td>`)}<tr><td></td><td>Предупреждения</td><td></td></tr><tr><td></td><td class="official-bold">Сумма</td><td></td></tr></table></div>`;}
@@ -9426,6 +9430,12 @@ function aftDisplayNoForSource(entry){
   return idx>=0?idx+1:(entry.matchNo||'__');
  }catch(e){return entry.matchNo||'__';}
 }
+/* v499 (бай): спортсмен выходит в круг без боя — в строке пары явная метка. Срабатывает, когда красный — спортсмен, а синий ещё ждёт победителя предыдущего боя. */
+function aftRedLine(m){
+ const base=athleteLine(m.red);
+ const bye=m&&m.red&&m.red.type==='athlete'&&m.blue&&m.blue.type==='winner'&&m.stage!=='pre';
+ return bye?{...base,name:base.name+' — БАЙ (проход без боя)'}:base;
+}
 function athleteLine(entry){
  if(!entry)return {name:'',region:''};
  if(entry.type==='athlete'){
@@ -9521,6 +9531,41 @@ function manualRegulationCellCount(cell){
 /* v488 (#14): количество боёв по стадиям в ячейке дня — все фишки ячейки */
 function aftStageCountsOfCell(td){const out={};if(!td||!td.querySelectorAll)return out;td.querySelectorAll('[data-stage-key]').forEach(ch=>{const k=String(ch.getAttribute('data-stage-key')||'');const n=parseInt(ch.getAttribute('data-stage-count')||'',10);if(k&&!isNaN(n))out[k]=(out[k]||0)+n;});return out;}
 /* v488 (#14): применение по стадиям: каждая стадия идёт в свои дни; лишнее — на последний день */
+/* v498 (№1-fix): стадийная раскладка с приоритетом ИТОГА ДНЯ.
+   Старая aftApplyStageAware() раскладывала только чипы, а всё прочее сваливала в последний
+   день. Если итог дня вписан числом (без чипов), эта стадия «терялась» и уезжала в конец —
+   отсюда «полуфиналы в первом дне». Здесь: (1) каждый день получает РОВНО dayCounts[d] боёв;
+   (2) чипы подсказывают, какая стадия идёт в этот день; (3) остаток дня добирается по порядку
+   стадий; (4) если план меньше сетки — лишнее в последний день, как раньше. */
+function aftApplyStageAwareStageFirst(catMatches,stageByDay,dayCounts){
+ const byStage={};catMatches.forEach(m=>{(byStage[m.stage]=byStage[m.stage]||[]).push(m)});
+ Object.keys(byStage).forEach(k=>byStage[k].sort((a,b)=>a.temp-b.temp));
+ const order=Object.keys(byStage).sort((a,b)=>stageRankForPairs(a)-stageRankForPairs(b));
+ const used={};order.forEach(k=>used[k]=0);
+ const take=(stage,n)=>{const list=byStage[stage]||[];const out=[];
+   for(let i=0;i<n&&used[stage]<list.length;i++,used[stage]++)out.push(list[used[stage]]);
+   return out};
+ const nDays=Math.max((dayCounts||[]).length,(stageByDay||[]).length,1);
+ const perDay=Array.from({length:nDays},(_,d)=>({
+   need:Math.max(0,parseInt((dayCounts||[])[d],10)||0),
+   chips:(stageByDay&&stageByDay[d])||{},
+   picks:[]
+ }));
+ perDay.forEach(day=>{Object.keys(day.chips).sort((a,b)=>stageRankForPairs(a)-stageRankForPairs(b))
+   .forEach(stage=>{const n=Math.max(0,parseInt(day.chips[stage],10)||0);
+     if(n)day.picks=day.picks.concat(take(stage,n));})});
+ perDay.forEach(day=>{while(day.picks.length<day.need){
+   order.sort((a,b)=>((byStage[b]||[]).length-used[b])-((byStage[a]||[]).length-used[a])
+     ||stageRankForPairs(a)-stageRankForPairs(b));
+   let added=false;
+   for(const stage of order){const t=take(stage,1);if(t.length){day.picks.push(t[0]);added=true;break}}
+   if(!added)break;
+ }});
+ const last=perDay[perDay.length-1];
+ order.forEach(stage=>{const left=(byStage[stage]||[]).length-used[stage];
+   if(left>0)last.picks=last.picks.concat(take(stage,left));});
+ perDay.forEach((day,d)=>day.picks.forEach(m=>{m.dayIndex=d;m.manualDay=true;}));
+}
 function aftApplyStageAware(catMatches,stageByDay){
  const byStage={};catMatches.forEach(m=>{(byStage[m.stage]=byStage[m.stage]||[]).push(m)});
  Object.keys(byStage).forEach(k=>byStage[k].sort((a,b)=>a.temp-b.temp));
@@ -9556,7 +9601,11 @@ function extractManualRegulationPlan() {
    if(dayCells.length<dayCount){dayCells=cells.slice(2,Math.max(2,cells.length-1)).slice(0,dayCount);}
    while(dayCells.length<dayCount)dayCells.push(null);
    const __stageRow=dayCells.slice(0,dayCount).map(td=>aftStageCountsOfCell(td));
-    const dayCounts=dayCells.slice(0,dayCount).map((td,__di)=>{ if(Object.keys(__stageRow[__di]||{}).length)return Object.values(__stageRow[__di]).reduce((a,b)=>a+b,0); if(td&&td.classList&&td.classList.contains('aft-reg-day-cell'))return 0; /* v488: пустая ячейка интерактивного дня = 0 */
+   /* v498 (№1-fix): стадийная раскладка только при реальных чипах в строке. */
+   const __hasStages=__stageRow.some(o=>Object.keys(o||{}).length);
+    const dayCounts=dayCells.slice(0,dayCount).map((td,__di)=>{ /* v498 (№1-fix): убрана ветка «сумма по чипам», перебивавшая data-aft-reg-total.
+   Итог дня всегда читает manualRegulationCellCount(): total → чипы → текст. */ /* v498 (№1-fix): пустая ячейка интерактивного дня НЕ означает 0. Ноль — только явный
+   (data-aft-reg-total="0", «0», «-», «—»). Иначе ручной план читался как все нули. */
      if(!td)return 0;
      if(typeof manualRegulationCellCount==='function'){
        const parsed=manualRegulationCellCount(td);
@@ -9576,7 +9625,7 @@ function extractManualRegulationPlan() {
    if(!candidates.length)candidates=cats.filter(c=>categoryWeightFromKey(c)===weight && !plan[c]);
    if(!candidates.length)candidates=cats.filter(c=>categoryWeightFromKey(c)===weight);
    const cat=candidates.find(c=>!plan[c]) || candidates[0];
-   if(cat){plan[cat]=dayCounts;__stageMap[cat]=__stageRow;}
+   if(cat){plan[cat]=dayCounts;if(__hasStages)__stageMap[cat]=__stageRow;}
  });
  Object.defineProperty(plan,'__stages',{value:__stageMap,enumerable:false}); /* v488 */
   const total=v172PlanTotal(plan);
@@ -9595,7 +9644,11 @@ function applyManualRegulationPlanToMatches(allMatches, plan){
  cats.forEach(cat=>{
    const dayCounts=plan[cat];
     if(!dayCounts)return;
-    if(plan.__stages&&plan.__stages[cat]){const __cm=allMatches.filter(m=>m.category===cat);aftApplyStageAware(__cm,plan.__stages[cat]);return;} /* v488 */
+    if(plan.__stages&&plan.__stages[cat]){
+    /* v498 (№1-fix): чипы есть → стадийный проход с приоритетом итога дня */
+    const __cm=allMatches.filter(m=>m.category===cat);
+    aftApplyStageAwareStageFirst(__cm,plan.__stages[cat],dayCounts);return;
+   } /* v488 */
    const catMatches=allMatches
     .filter(m=>m.category===cat)
     .sort((a,b)=>stageRankForPairs(a.stage)-stageRankForPairs(b.stage)||a.temp-b.temp);
@@ -10527,7 +10580,7 @@ function getOrderedPairsForDay(dayIndex){
  return applyManualPairsOrder(dayIndex,sortPairsForDay(raw));
 }
 function pairMoveLabel(m,idx){
- const red=athleteLine(m.red), blue=athleteLine(m.blue);
+ const red=aftRedLine(m), blue=athleteLine(m.blue);
  const w=categoryWeightDisplay(m.weight).replace(' кг','');
  return `${idx+1}. ${w} · ${red.name||'Красный угол'} — ${blue.name||'Синий угол'} · ${stageLabel(m.stage)}`;
 }
@@ -10563,7 +10616,7 @@ function openMovePairModal(dayIndex,cat,key){
  const idx=ordered.findIndex(m=>m.category===cat && String(m.key)===String(key));
  if(idx<0){showStatus('❌ Пара не найдена в выбранном дне',true);return;}
  const m=ordered[idx];
- const red=athleteLine(m.red), blue=athleteLine(m.blue);
+ const red=aftRedLine(m), blue=athleteLine(m.blue);
  closeMovePairModal();
  window.__pendingMovePair={dayIndex,cat,key};
  const opts=ordered.map((mm,i)=>`<option value="${i}" ${i===idx?'selected':''}>${esc(pairMoveLabel(mm,i))}</option>`).join('');
@@ -10785,7 +10838,7 @@ function renderPairsDay(dayIndex, matches, day){
  let currentGroupKey='';
  const rows=matches.map(m=>{
    localPairNo++;
-   const red=athleteLine(m.red), blue=athleteLine(m.blue);
+   const red=aftRedLine(m), blue=athleteLine(m.blue);
    const redId=resolvePairEntryToAthleteId(m.red,m.category);
    const blueId=resolvePairEntryToAthleteId(m.blue,m.category);
    const res=getBracketResult(m.key,m.category);
@@ -13567,6 +13620,89 @@ function aftIsSimpleTypedWeightInAllowedRange(value){
  const n=parseWeightValue(value);
  return !isNaN(n) && n>=10 && n<=200 && n<9999;
 }
+/* v498 (№2): перенос спортсмена из категории больше не стирает сетку целиком.
+   Остальные остаются в сетке; из результатов удаляем только бои, которых в новой сетке нет
+   или в которых участвовал/победил перенесённый. KO-события снимаем через deleteBracketResult(). */
+function aftPruneOldCategoryAfterMove(oldCat,movedId){
+ const stat={removed:0,rekeyed:0,kept:0};
+ try{
+  if(!isCategoryDrawn(oldCat))return stat;
+  const before=(categoryDrawOrders[oldCat]||[]).map(String);
+  const rest=before.filter(id=>id!==String(movedId));
+  categoryDrawOrders[oldCat]=rest;
+  const oldKeys=new Set(); const newKeys=new Set();
+  const keysOf=ids=>{const set=new Set();try{computeBracket(ids.slice()).rounds.forEach(r=>(r||[]).forEach(m=>{if(m&&m.key)set.add(m.key)}))}catch(_e){}return set};
+  keysOf(before).forEach(k=>oldKeys.add(k));
+  keysOf(rest).forEach(k=>newKeys.add(k));
+  const inCat=new Set(rest);
+  const prefix=oldCat+'::';
+  const entries=Object.keys(bracketResults||{}).filter(k=>k.indexOf(prefix)===0);
+  if(rest.length>1){
+    /* (а) при уменьшении числа участников меняются имена боёв (n=8: r0_0,r0_2 → n=7: pre_0_1,pre_2_3).
+       Переносим результат в новый бой с теми же углами, а не теряем его. */
+    const canon=(x,y)=>[String(x||''),String(y||'')].sort().join('|');
+    const nb=computeBracket(rest.slice()).rounds.flat().filter(m=>m.a&&m.b);
+    const used=new Set();
+    nb.forEach(bm=>{
+      const target=bracketResultKey(bm.key,oldCat);
+      if(bracketResults[target])return;
+      const bt=canon(bm.a,bm.b);
+      let hit=null;
+      entries.forEach(k=>{
+        if(hit||used.has(k))return;
+        const r=bracketResults[k]||{};
+        if(canon(r.redId,r.blueId)!==bt)return;
+        if(String(r.winnerId||'')===String(movedId))return;
+        hit={k,r};
+      });
+      if(!hit)return;
+      used.add(hit.k);
+      /* KO-событие переезжает вместе с боем: сначала снимаем старое (штатной функцией),
+         иначе в медицинском отчёте останется нокаут по несуществующему бою */
+      const bare=hit.k.slice(prefix.length);
+      let ko=null;
+      try{ko=(knockoutEvents||[]).find(e=>knockoutEventKey(e.category,e.matchKey)===knockoutEventKey(oldCat,bare))||null}catch(_e){}
+      deleteBracketResult(bare,oldCat);
+      bracketResults[target]={...hit.r,redId:bm.a,blueId:bm.b,category:oldCat,matchKey:bm.key,rekeyedFrom:hit.k};
+      if(ko){try{knockoutEvents=normalizeKnockoutEvents((knockoutEvents||[]).concat([{...ko,matchKey:bm.key}]))}catch(_e){}}
+      stat.rekeyed++;
+    });
+  }
+  /* (б) удаляем то, что осталось: боя нет в старой сетке, спортсмен ушёл, KO-событие надо снять */
+  entries.forEach(k=>{
+    if(!bracketResults[k])return;
+    const key=k.slice(prefix.length);
+    const r=bracketResults[k]||{};
+    const canStay=oldKeys.has(key)&&inCat.has(String(r.winnerId||''))
+      &&(!r.redId||inCat.has(String(r.redId)))&&(!r.blueId||inCat.has(String(r.blueId)));
+    if(canStay){stat.kept++;return}
+    deleteBracketResult(key,oldCat);stat.removed++;
+  });
+  /* (г) финальная зачистка: результат не должен висеть на ключе, которого в сетке нет,
+     иначе после переноса «туда-обратно» старый победитель неожиданно всплывает в интерфейсе */
+  Object.keys(bracketResults||{}).forEach(k=>{
+    if(k.indexOf(prefix)!==0)return;
+    const bare=k.slice(prefix.length);
+    if(newKeys.has(bare))return;
+    if(!oldKeys.has(bare)&&!newKeys.size)return;
+    deleteBracketResult(bare,oldCat);stat.removed++;
+  });
+  /* (в) «висячие» НК после переноса: бой ещё в сетке, но боксёр уже в другой категории */
+  try{
+    if(Array.isArray(knockoutEvents)){
+      const kept=normalizeKnockoutEvents(knockoutEvents||[]).filter(e=>{
+        if(normalizeCatKey(e&&e.category)!==normalizeCatKey(oldCat))return true;
+        const k=String(e.matchKey||'');
+        if(!newKeys.has(k))return false;
+        return inCat.has(String(e.knockedOutAthleteId||''))&&inCat.has(String(e.winnerId||''));
+      });
+      if(kept.length!==(knockoutEvents||[]).length)stat.koRemoved=(knockoutEvents||[]).length-kept.length;
+      knockoutEvents=kept;
+    }
+  }catch(_e){}
+  return stat;
+ }catch(_e){stat.error=String(_e&&_e.message||_e);return stat}
+}
 function moveAthlete(id){
  const a=getA(id); if(!a)return;
  const oldCat=categoryKeyOf(a), oldWeight=a.weight||'', oldActualWeight=a.actualWeight||'';
@@ -13618,7 +13754,7 @@ function moveAthlete(id){
  currentCategory=newCat;
  v146ProtectChangedCategories([oldCat,newCat],'move athlete simple weight');
   /* v493 (#21): старая сетка и её результаты содержат перенесённого спортсмена — они больше не совместимы */
-  if(oldCat!==newCat){try{if(isCategoryDrawn(oldCat)){delete categoryDrawOrders[oldCat];}clearBracketResultsForCategory(oldCat);}catch(_e){}}
+  if(oldCat!==newCat){try{aftPruneOldCategoryAfterMove(oldCat,a.id);}catch(_e){}} /* v498 (№2) */
  try{v148InvalidateCaches();}catch(_){ }
  drawOrder=getDrawOrderForCategory(currentCategory);
  refreshAll();
@@ -15231,6 +15367,49 @@ function v190DeleteAssignmentsForDay(dayIndex){
    Жадный выбор раньше брал занятого судью, если свободных не было, и назначал его на два ринга. Теперь: найдено решение — назначаем;
    не найдено — позиция остаётся незаполненной, без двойного назначения. */
 function aftSlotJudgeScore(j,m){return (judgeConflictReasons(j,m).length*100000)+judgeRingPenalty(j,m);}
+/* v498 (№3): укомплектовать ровно m первых боёв слота, никого не занимая дважды.
+   Мемоизация тупиков + бюджет шагов, чтобы перебор не взрывался на больших слотах. */
+function aftTryPlanGroup(idxs,matches,refC,sideC,S){
+ const out=new Array(idxs.length);
+ const used=new Set();
+ const dead=new Set();
+ let budget=20000, exhausted=false;
+ function sides(t,start,need,acc,rid){
+   if(need===0){
+     out[t]={refereeId:rid,judgeIds:acc.slice()};
+     if(dfs(t+1))return true;
+     out[t]=null;
+     return false;
+   }
+   for(let c=start;c<sideC.length;c++){
+     if(--budget<0){exhausted=true;return false}
+     const sid=String(sideC[c].id);
+     if(used.has(sid))continue;
+     used.add(sid);acc.push(sid);
+     if(sides(t,c+1,need-1,acc,rid))return true;
+     acc.pop();used.delete(sid);
+   }
+   return false;
+ }
+ function dfs(t){
+   if(t===idxs.length)return true;
+   const sig=t+'|'+[...used].sort().join(',');
+   if(dead.has(sig))return false;
+   for(const r of refC){
+     if(--budget<0){exhausted=true;return false}
+     const rid=String(r.id);
+     if(used.has(rid))continue;
+     used.add(rid);
+     if(sides(t,0,S,[],rid))return true;
+     used.delete(rid);
+   }
+   dead.add(sig);
+   return false;
+ }
+ if(!refC.length||sideC.length<S)return {ok:false,partial:true,reason:'not-enough-judges'};
+ if(dfs(0))return {ok:true,crew:out.map(x=>x&&{refereeId:x.refereeId,judgeIds:x.judgeIds.slice()})};
+ return {ok:false,exhausted,reason:exhausted?'budget':'no-solution'};
+}
 function aftPlanSimultaneousSlots(matches,pool,refsPool,sidesPool){
  const plans=new Map();
  if(getRingsCount()<=1)return plans;
@@ -15265,8 +15444,15 @@ function aftPlanSimultaneousSlots(matches,pool,refsPool,sidesPool){
     }
     return false;
   }
-  if(dfs(0)) idxs.forEach((idx,t)=>plans.set(idx,res[t]));
-  else idxs.forEach(idx=>plans.set(idx,null));
+    /* v498 (№3): при нехватке судей укомплектовываем максимальный префикс боёв слота,
+     а не обнуляем слот целиком. Inline-DFS выше больше не используется. */
+  let crew=null, filled=0;
+  for(let mcount=idxs.length;mcount>=1;mcount--){
+    const r=aftTryPlanGroup(idxs.slice(0,mcount),matches,refC,sideC,S);
+    if(r&&r.ok){crew=r.crew;filled=mcount;break}
+    if(r&&r.reason==='not-enough-judges')break;
+  }
+  idxs.forEach((idx,t)=>plans.set(idx,(crew&&t<filled)?crew[t]:null));
  });
  return plans;
 }
