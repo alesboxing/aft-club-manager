@@ -1009,26 +1009,44 @@ body.print-pairs #pairsPrintOnly .blue-line{
 }
 
 
+.pairs-table-wrap{
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
 .pair-result-cell{
-  width:105px;
+  min-width:158px;
+  width:164px;
   text-align:center;
+  vertical-align:middle!important;
+  padding:6px 8px!important;
 }
 .pair-win-btn{
   border:0;
-  border-radius:7px;
-  padding:4px 7px;
-  font-size:10px;
+  border-radius:999px;
+  min-height:44px;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:10px 12px;
+  font-size:12.5px;
+  line-height:1.15;
   font-weight:900;
   cursor:pointer;
-  margin:1px;
+  margin:4px 0;
   color:white;
+  touch-action:manipulation;
+  box-shadow:0 2px 6px rgba(15,23,42,.14);
 }
 .pair-win-btn.red{background:#dc2626}
 .pair-win-btn.blue{background:#2563eb}
 .pair-score-badge{
   display:inline-block;
-  margin-top:3px;
-  font-size:10px;
+  margin-top:4px;
+  font-size:10.5px;
   font-weight:900;
   color:#166534;
 }
@@ -1055,7 +1073,7 @@ body.print-pairs #pairsPrintOnly .blue-line{
   position:fixed;
   inset:0;
   z-index:9999;
-  background:rgba(15,23,42,.52);
+  background:rgba(15,23,42,.56);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -1063,14 +1081,217 @@ body.print-pairs #pairsPrintOnly .blue-line{
 }
 .pair-score-box{
   width:min(560px,94vw);
+  max-height:90vh;
   background:#fff;
   border-radius:22px;
   box-shadow:0 22px 60px rgba(15,23,42,.35);
   padding:18px;
   border:1px solid #e2e8f0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.aft-sheet-handle{
+  display:none;
+  width:42px;
+  height:4px;
+  border-radius:99px;
+  background:#cbd5e1;
+  margin:0 auto 10px;
+  flex:0 0 auto;
+}
+.aft-sheet-scroll{
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  flex:1 1 auto;
+  min-height:0;
+  padding-right:2px;
+}
+.aft-score-sides{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:10px 0 12px;
+}
+.aft-score-side-btn{
+  min-height:46px;
+  border:2px solid #e2e8f0;
+  border-radius:14px;
+  padding:8px 10px;
+  background:#f8fafc;
+  color:#0f172a;
+  font-weight:900;
+  font-size:12.5px;
+  line-height:1.2;
+  cursor:pointer;
+  text-align:left;
+  touch-action:manipulation;
+}
+.aft-score-side-btn small{
+  display:block;
+  font-size:10.5px;
+  font-weight:800;
+  opacity:.82;
+  margin-bottom:2px;
+}
+.aft-score-side-btn.red.active{
+  background:linear-gradient(135deg,#dc2626,#b91c1c);
+  border-color:#991b1b;
+  color:#fff;
+  box-shadow:0 6px 16px rgba(220,38,38,.24);
+}
+.aft-score-side-btn.blue.active{
+  background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  border-color:#1e40af;
+  color:#fff;
+  box-shadow:0 6px 16px rgba(37,99,235,.24);
+}
+.pair-score-choice.is-selected{
+  outline:4px solid #0f172a;
+  outline-offset:1px;
+  transform:translateY(-1px);
+  box-shadow:0 10px 22px rgba(15,23,42,.26)!important;
+}
+.aft-rsc-inline{
+  margin-top:10px;
+  padding:10px;
+  border-radius:14px;
+  background:#fffbeb;
+  border:2px solid #fbbf24;
+}
+.aft-rsc-inline-title{
+  font-size:12px;
+  font-weight:1000;
+  color:#92400e;
+  margin-bottom:8px;
+}
+.aft-rsc-inline-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(74px,1fr));
+  gap:8px;
+}
+.aft-rsc-inline-btn{
+  min-height:46px;
+  border-radius:12px;
+  border:2px solid #2563eb;
+  background:#eff6ff;
+  color:#1e40af;
+  font-weight:1000;
+  font-size:14px;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.aft-rsc-inline-btn.active{
+  background:#1d4ed8;
+  color:#fff;
+  box-shadow:0 6px 14px rgba(37,99,235,.25);
+}
+.aft-sheet-footer{
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px solid #e2e8f0;
+  background:#fff;
+}
+.aft-sheet-save-btn{
+  width:100%;
+  min-height:48px;
+  border:0;
+  border-radius:14px;
+  background:linear-gradient(135deg,#16a34a,#15803d);
+  color:#fff;
+  font-size:15px;
+  font-weight:1000;
+  cursor:pointer;
+  box-shadow:0 8px 18px rgba(22,163,74,.24);
+  touch-action:manipulation;
+}
+.aft-sheet-save-btn.is-pending{
+  background:#cbd5e1;
+  color:#334155;
+  box-shadow:none;
+}
+.aft-sheet-footer-row{
+  display:flex;
+  gap:8px;
+}
+.aft-sheet-footer-row .pair-score-cancel{
+  margin-top:0;
+  flex:1;
+  min-height:46px;
+}
+.aft-sheet-clear-btn{
+  min-height:46px;
+  padding:10px 14px;
+  border-radius:14px;
+  border:1px solid #fecaca;
+  background:#fef2f2;
+  color:#b91c1c;
+  font-weight:1000;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.aft-weight-chips{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(74px,1fr));
+  gap:8px;
+  margin:8px 0 12px;
+}
+.aft-weight-chip{
+  min-height:44px;
+  border-radius:12px;
+  border:1.5px solid #cbd5e1;
+  background:#f8fafc;
+  color:#0f172a;
+  font-weight:900;
+  font-size:14px;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.aft-weight-chip.active{
+  border-color:#1d4ed8;
+  background:#eff6ff;
+  color:#1d4ed8;
+  box-shadow:0 0 0 2px rgba(37,99,235,.2);
+}
+.aft-weight-input{
+  width:100%;
+  min-height:48px;
+  padding:10px 14px;
+  border:2px solid #cbd5e1;
+  border-radius:14px;
+  font-size:18px;
+  font-weight:900;
+  color:#0f172a;
+  background:#fff;
+  box-sizing:border-box;
+}
+.aft-weight-input:focus{
+  outline:none;
+  border-color:#2563eb;
+  box-shadow:0 0 0 3px rgba(37,99,235,.15);
+}
+.aft-weight-preview{
+  margin-top:8px;
+  padding:9px 12px;
+  border-radius:12px;
+  background:#eff6ff;
+  border:1px solid #bfdbfe;
+  color:#1e3a8a;
+  font-size:12.5px;
+  font-weight:900;
+  line-height:1.35;
+}
+.aft-weight-preview.err{
+  background:#fef2f2;
+  border-color:#fecaca;
+  color:#991b1b;
 }
 .pair-score-title{font-weight:1000;font-size:18px;color:#0f172a;margin-bottom:6px}
-.pair-score-sub{font-size:13px;color:#64748b;font-weight:800;line-height:1.35;margin-bottom:14px}
+.pair-score-sub{font-size:13px;color:#64748b;font-weight:800;line-height:1.35;margin-bottom:10px}
 .pair-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .pair-score-choice{
   border:0;
@@ -1082,6 +1303,7 @@ body.print-pairs #pairsPrintOnly .blue-line{
   background:linear-gradient(135deg,#22c55e,#16a34a);
   color:white;
   box-shadow:0 8px 18px rgba(22,163,74,.22);
+  touch-action:manipulation;
 }
 .pair-score-choice:nth-child(2){background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 8px 18px rgba(37,99,235,.22)}
 .pair-score-choice:nth-child(3){background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 8px 18px rgba(217,119,6,.22)}
@@ -1091,6 +1313,7 @@ body.print-pairs #pairsPrintOnly .blue-line{
 .pair-score-cancel{
   margin-top:12px;
   width:100%;
+  min-height:46px;
   border:1px solid #e2e8f0;
   background:#f8fafc;
   color:#334155;
@@ -1102,13 +1325,13 @@ body.print-pairs #pairsPrintOnly .blue-line{
 
 /* v105: official bout outcomes from Russian boxing rules */
 .pair-score-grid.outcome-grid{
-  grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(124px,1fr));
 }
 .pair-score-choice.outcome-choice{
-  font-size:13px;
+  font-size:13.5px;
   line-height:1.15;
-  min-height:46px;
-  padding:9px 6px;
+  min-height:48px;
+  padding:10px 8px;
   border-radius:12px;
 }
 .outcome-note{
@@ -2338,6 +2561,80 @@ body{background:var(--aft-bg)!important;color:var(--aft-ink);font-family:Inter,"
 /* v403: кнопка «Назад» не перекрывает карточки: обычная строка сверху */
 .aft-back-btn{position:static!important;float:none!important;box-shadow:none!important;transform:none!important;width:auto!important;border-radius:10px!important;margin:0 0 8px 0!important}
 .aft-back-btn:hover{transform:none!important}
+/* ===== Mobile UX fixes: Pairs, Header/Sidebar <400px, Full-width Modals ===== */
+.crm-sidebar-close{display:none}
+.crm-topbar{position:sticky!important;top:0;z-index:900!important}
+@media(max-width:900px){
+  html,body{max-width:100%;overflow-x:clip}
+  .crm-shell,.crm-main,.container,.panel{min-width:0;max-width:100%;box-sizing:border-box}
+  .panel > *,.reg-form > *,.pairs-filter-grid > *,.form-grid > *,.tournament-grid > *,.row > *{min-width:0;max-width:100%}
+  .badge{max-width:100%;min-width:0;overflow:hidden}
+  .badge select{min-width:0;max-width:100%;flex:1 1 auto}
+  .table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .crm-topbar{padding:8px 10px;min-height:56px;gap:8px}
+  .crm-topbar-left{min-width:0;flex:1;gap:8px!important}
+  .crm-title-wrap{min-width:0;flex:1;overflow:hidden}
+  .crm-page-title{font-size:15px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crm-page-sub{font-size:11px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .crm-mobile-toggle{min-width:44px;min-height:44px;padding:0 10px!important;font-size:20px!important;flex:0 0 auto;align-items:center;justify-content:center}
+  .crm-sidebar{width:min(286px,84vw);z-index:1300}
+  .crm-sidebar-scrim{z-index:1290;background:rgba(15,23,42,.48);backdrop-filter:blur(2px)}
+  .crm-sidebar-close{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin-left:auto;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.10);color:#fff;border-radius:12px;font-size:18px;font-weight:900;cursor:pointer;flex:0 0 auto}
+  .crm-nav button{min-height:44px}
+  body.sidebar-open{overflow:hidden}
+  body.sidebar-open .aft-floating-back{opacity:0!important;pointer-events:none!important}
+  .aft-floating-back{z-index:850}
+  .passport-progress-bar{position:static!important}
+  .pairs-preview-wrap{width:100%;max-width:100%;padding:6px;border-radius:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box}
+  #pairsSheet{width:100%;max-width:100%;min-width:0}
+  .pairs-sheet{width:100%!important;min-width:0!important;max-width:100%!important;min-height:auto!important;padding:14px 10px!important;margin-bottom:10px!important;box-sizing:border-box!important}
+  .pairs-sheet:before{height:5px}
+  .pairs-table-wrap{border:1px solid #e2e8f0;border-radius:10px;background:#fff;width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .pairs-table{min-width:680px;font-size:12.5px}
+  .pairs-table .pair-result-cell{min-width:158px;width:164px}
+}
+@media(max-width:760px){
+  #panel-pairs .reg-form select,#panel-pairs .pairs-filter-grid select,#panel-entry .badge select{min-height:44px;font-size:16px}
+  .pairs-sheet .pairs-meta{grid-template-columns:1fr!important;text-align:left!important;gap:4px!important;font-size:12px!important;margin:8px 0 12px!important}
+  .pairs-sheet .pairs-meta > div{text-align:left!important}
+  .pair-score-modal,.edit-athlete-modal,.force-merge-modal,.fight-modal,.aft-deploy-modal-backdrop,#rscRoundModal,#groupExportPicker,#functionNavigator,#demoPassportModal{align-items:flex-end!important;justify-content:center!important;padding:0!important}
+  .pair-score-box,.ko-details-box,.edit-athlete-box,.force-merge-box,.fight-modal-box,.aft-deploy-modal,#rscRoundModal > div,#groupExportPicker > div,#functionNavigator > div,#demoPassportModal > div{width:100%!important;max-width:100%!important;max-height:94vh!important;max-height:94dvh!important;border-radius:20px 20px 0 0!important;margin:0!important;box-sizing:border-box!important}
+  .aft-sheet-handle{display:block}
+  .pair-score-box{padding:12px 14px calc(14px + env(safe-area-inset-bottom))!important}
+  .edit-athlete-box,.force-merge-box,.fight-modal-box{padding:16px 14px calc(16px + env(safe-area-inset-bottom))!important;overflow-y:auto!important}
+  .eam-field input,.eam-field select,.force-merge-box input,.force-merge-box select,.fight-score-custom,.ko-details-grid input,.ko-details-grid select,.ko-details-grid textarea,#movePairTargetIndex,#fnSearch{font-size:16px!important;min-height:44px}
+  .eam-actions .btn,.fight-modal-actions .btn,.ko-save-btn{min-height:46px}
+  .eam-actions .btn{flex:1;justify-content:center}
+  #rscRoundModal > div{padding:18px 14px calc(18px + env(safe-area-inset-bottom))!important}
+  #rscRoundModal .aft-rsc-btn{min-height:48px}
+}
+@media(max-width:600px){
+  .docs-intro,.search-results,.workflow-grid,.docs-grid,.reg-form,.tournament-grid,.section-action-grid,.form-grid,.report-form-grid,.pairs-filter-grid,.diagnostics-grid,.all-draws-grid,.ms-ui > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:minmax(0,1fr)!important}
+}
+@media(max-width:480px){
+  .eam-row2{grid-template-columns:1fr}
+  .fight-corners,.fight-winner-btns{gap:8px}
+  .fight-corner-name{font-size:14px}
+  .fight-win-btn{min-height:48px;font-size:14px;padding:12px 8px}
+  .aft-score-sides{gap:6px}
+}
+@media(max-width:400px){
+  .crm-topbar{padding:7px 8px;min-height:52px}
+  .crm-page-title{font-size:14px}
+  .crm-page-sub{font-size:10.5px}
+  .crm-brand{padding:14px 12px!important}
+  .crm-logo-mark{width:38px;height:38px;font-size:13px;border-radius:11px}
+  .crm-brand-title{font-size:13.5px}
+  .crm-nav{padding:8px 8px 16px}
+  .crm-nav button{font-size:13px!important;padding:10px 10px!important}
+  .container{padding:8px!important}
+  .panel{padding:12px 10px!important;border-radius:12px!important}
+}
+@media print{
+  .pairs-table-wrap{overflow:visible!important;border:0!important;border-radius:0!important}
+  .pairs-table{min-width:0!important}
+  .crm-sidebar-close{display:none!important}
+}
 </style>
 
 <script id="aft-v363-global-esc">
@@ -2470,7 +2767,8 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){retur
     <div class="crm-brand">
       <div class="crm-logo-row">
         <div class="crm-logo-mark">AFT</div>
-        <div><div class="crm-brand-title">AFT BRACKET<br>SYSTEM</div><div class="crm-brand-sub">Турнир · судейство · отчёты</div></div>
+        <div style="min-width:0;flex:1"><div class="crm-brand-title">AFT BRACKET<br>SYSTEM</div><div class="crm-brand-sub">Турнир · судейство · отчёты</div></div>
+        <button type="button" class="crm-sidebar-close" aria-label="Закрыть меню" onclick="closeMobileSidebar()">✕</button>
       </div>
     </div>
     <div class="help-mode-badge">Режим подсказок включён. Читайте пояснение под каждой кнопкой и идите сверху вниз.</div>
@@ -2607,10 +2905,10 @@ window.aftActionsMenu={setMode:setMode};
   </aside>
   <main class="crm-main">
     <div class="crm-topbar">
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="btn crm-mobile-toggle" onclick="toggleMobileSidebar(event)">☰</button>
+      <div class="crm-topbar-left" style="display:flex;align-items:center;gap:10px">
+        <button class="btn crm-mobile-toggle" aria-label="Открыть меню" onclick="toggleMobileSidebar(event)">☰</button>
         <button class="aft-back-btn aft-top-back" id="aftBackBtnTop" title="Вернуться на предыдущий экран" onclick="aftGoBack()">← Назад</button>
-        <div><div class="crm-page-title">AFT BRACKET SYSTEM</div><div class="crm-page-sub">Готово к пилотному внедрению единого цифрового стандарта турниров</div></div>
+        <div class="crm-title-wrap"><div class="crm-page-title">AFT BRACKET SYSTEM</div><div class="crm-page-sub">Готово к пилотному внедрению единого цифрового стандарта турниров</div></div>
       </div>
       <div class="crm-quick">
         <span id="tournamentBadge" class="tournament-badge">🏆 Турнир</span>
@@ -3257,7 +3555,7 @@ window.aftActionsMenu={setMode:setMode};
     <div class="eam-row2">
       <div class="eam-field">
         <label>Вес (кг)</label>
-        <input id="eamWeight" type="number" placeholder="15" min="10" max="200" step="0.1">
+        <input id="eamWeight" type="number" inputmode="decimal" placeholder="15" min="10" max="200" step="0.1">
       </div>
       <div class="eam-field">
         <label>Возрастная группа</label>
@@ -4695,8 +4993,20 @@ function toggleMobileSidebar(ev){
  if(ev&&ev.stopPropagation)ev.stopPropagation();
  document.body.classList.toggle('sidebar-open');
 }
+document.addEventListener('click',function(ev){
+ if(window.innerWidth>900)return;
+ if(!document.body.classList.contains('sidebar-open'))return;
+ const btn=ev.target&&ev.target.closest?ev.target.closest('.crm-sidebar .crm-nav button'):null;
+ if(btn&&btn.id!=='helpModeBtn')closeMobileSidebar();
+});
 document.addEventListener('keydown',function(ev){
- if(ev.key==='Escape')closeMobileSidebar();
+ if(ev.key!=='Escape')return;
+ closeMobileSidebar();
+ const wm=$('weightSelectModal');if(wm){wm.remove();return;}
+ const ps=$('pairScoreModal');if(ps){ps.remove();return;}
+ const rs=$('rscRoundModal');if(rs){rs.remove();return;}
+ const mp=$('movePairModal');if(mp){mp.remove();return;}
+ const ko=$('knockoutDetailsModal');if(ko){ko.remove();return;}
 });
 
 function showPanel(n){
@@ -5998,7 +6308,7 @@ function openEditAthleteModal(id){
  const st=$('eamStatus');if(st){st.className='status';st.innerHTML='';}
  _eamUpdateAgePreview();
  const m=$('editAthleteModal');if(m)m.classList.add('open');
- setTimeout(()=>{const f=$('eamFio');if(f)f.focus();},80);
+ setTimeout(()=>{const f=$('eamFio');if(f&&window.innerWidth>760)f.focus();},80);
 }
 function closeEditAthleteModal(){
  const m=$('editAthleteModal');if(m)m.classList.remove('open');
@@ -6073,6 +6383,7 @@ function saveEditAthleteModal(){
  drawOrder=getDrawOrderForCategory(currentCategory);
  addAction('edit_athlete', a.fio+' · '+a.weight+' · '+a.region);
  refreshAll();
+ if($('athleteSearch')&&String($('athleteSearch').value||'').trim())searchAthletes();
  saveData(false);
  closeEditAthleteModal();
  showStatus('✅ Участник обновлён');
@@ -10221,6 +10532,120 @@ function closePairScorePicker(){
  if(old)old.remove();
  window.__pendingPairScore=null;
 }
+function aftPairScoreRender(){
+ const st=window.__pendingPairScore;
+ const modal=$('pairScoreModal');
+ if(!st||!modal)return;
+ const box=modal.querySelector('.pair-score-box');
+ if(!box)return;
+ const m=getPairMatchByKey(st.cat,st.key);
+ const redId=m?resolvePairEntryToAthleteId(m.red,st.cat):null;
+ const blueId=m?resolvePairEntryToAthleteId(m.blue,st.cat):null;
+ const redAth=redId?getA(redId):null;
+ const blueAth=blueId?getA(blueId):null;
+ const redName=redAth?redAth.fio:(m&&m.red&&m.red.name)||'Красный угол';
+ const blueName=blueAth?blueAth.fio:(m&&m.blue&&m.blue.name)||'Синий угол';
+ const winnerName=st.side==='red'?redName:blueName;
+ const opts=getPairScoreOptions();
+ const isYap=!!(st.outcome && /(ЯП|RSC)(?!-I)/i.test(st.outcome));
+ const finalScore=st.outcome?(isYap?(st.round?`${st.outcome}, ${st.round} раунд`:''):st.outcome):'';
+ const ready=!!finalScore;
+ const roundsCount=(typeof getRoundsCount==='function')?getRoundsCount():3;
+ let rscHTML='';
+ if(isYap){
+   let rBtns='';
+   for(let r=1;r<=roundsCount;r++){
+     rBtns+=`<button type="button" class="aft-rsc-inline-btn${st.round===r?' active':''}" onclick="aftPairScoreSelectRound(${r})">${r} раунд</button>`;
+   }
+   rscHTML=`<div class="aft-rsc-inline" id="aftRscInlineBox"><div class="aft-rsc-inline-title">⏱ Укажите раунд для ЯП / RSC</div><div class="aft-rsc-inline-grid">${rBtns}</div></div>`;
+ }
+ const existing=getBracketResult(st.key,st.cat);
+ const hasExisting=!!(existing && existing.winnerId);
+ box.innerHTML=`
+   <div class="aft-sheet-handle" aria-hidden="true"></div>
+   <div class="pair-score-title">💡 Результат боя${m&&m.localNo?' №'+esc(m.localNo):''}</div>
+   <div class="pair-score-sub">Победитель: <b>${esc(winnerName)}</b> · ${esc(categoryLabelFromKey(st.cat))}</div>
+   <div class="aft-sheet-scroll">
+     <div class="aft-score-sides">
+       <button type="button" class="aft-score-side-btn red${st.side==='red'?' active':''}" onclick="aftPairScoreSelectSide('red')"><small>🔴 Красный угол</small>${esc(redName)}</button>
+       <button type="button" class="aft-score-side-btn blue${st.side==='blue'?' active':''}" onclick="aftPairScoreSelectSide('blue')"><small>🔵 Синий угол</small>${esc(blueName)}</button>
+     </div>
+     <div class="pair-score-grid outcome-grid">
+       ${opts.map((score,i)=>`<button type="button" class="pair-score-choice outcome-choice${st.outcome===score?' is-selected':''}" data-score-idx="${i}" onclick="aftPairScoreSelectOutcome(${i})">${esc(score)}</button>`).join('')}
+     </div>
+     ${rscHTML}
+     <div class="outcome-note">Поддерживаются решения по очкам: при 5 судьях WP 5-0, 4-1, 3-2; при 3 судьях WP 3-0, 2-1. Досрочные исходы: ЯП/RSC (с выбором раунда здесь), НПБ/RSC-I, НК/KO, НЯ/WO, ОТК/ABD, ДСК/DSQ.</div>
+   </div>
+   <div class="aft-sheet-footer">
+     <button type="button" class="aft-sheet-save-btn${ready?'':' is-pending'}" onclick="aftPairScoreSave()">${ready?'✅ Сохранить результат ('+esc(finalScore)+')':(isYap?'⏱ Выберите раунд для ЯП / RSC':'👆 Выберите исход боя выше')}</button>
+     <div class="aft-sheet-footer-row">
+       ${hasExisting?'<button type="button" class="aft-sheet-clear-btn" onclick="aftPairScoreClear()">🗑 Очистить</button>':''}
+       <button type="button" class="pair-score-cancel" onclick="closePairScorePicker()">Отмена</button>
+     </div>
+   </div>`;
+}
+function aftPairScoreSelectSide(side){
+ if(!window.__pendingPairScore)return;
+ window.__pendingPairScore.side=(side==='blue'?'blue':'red');
+ aftPairScoreRender();
+}
+function aftPairScoreSelectOutcome(idx){
+ const st=window.__pendingPairScore;
+ if(!st)return;
+ const opts=getPairScoreOptions();
+ const score=opts[idx];
+ if(!score)return;
+ st.outcome=score;
+ if(!/(ЯП|RSC)(?!-I)/i.test(score))st.round=0;
+ aftPairScoreRender();
+ if(/(ЯП|RSC)(?!-I)/i.test(score)){
+   const rb=$('aftRscInlineBox');
+   if(rb&&rb.scrollIntoView)rb.scrollIntoView({block:'nearest',behavior:'smooth'});
+ }
+}
+function aftPairScoreSelectRound(r){
+ const st=window.__pendingPairScore;
+ if(!st)return;
+ st.round=parseInt(r,10)||1;
+ aftPairScoreRender();
+}
+function aftPairScoreSave(){
+ const st=window.__pendingPairScore;
+ if(!st)return;
+ if(!st.outcome){showStatus('⚠️ Сначала выберите исход боя',true);return;}
+ const isYap=/(ЯП|RSC)(?!-I)/i.test(st.outcome);
+ if(isYap&&!st.round){
+   showStatus('⚠️ Выберите раунд для ЯП / RSC',true);
+   const rb=$('aftRscInlineBox');if(rb&&rb.scrollIntoView)rb.scrollIntoView({block:'nearest',behavior:'smooth'});
+   return;
+ }
+ const finalScore=isYap?`${st.outcome}, ${st.round} раунд`:st.outcome;
+ confirmPairWinnerScore(st.cat,st.key,st.side,finalScore);
+}
+function aftPairScoreClear(){
+ const st=window.__pendingPairScore;
+ if(!st)return;
+ const existing=getBracketResult(st.key,st.cat);
+ if(!existing||!existing.winnerId){closePairScorePicker();return;}
+ pushUndo('очистка результата боя');
+ const __old=aftCloneResult(st.key,st.cat);
+ deleteBracketResult(st.key,st.cat);
+ if(!aftGuardDownstream(st.cat,null,()=>aftRestoreResult(st.key,st.cat,__old)))return;
+ cleanupKnockoutEventForMatch(st.cat,st.key);
+ const keepDay=$('pairsDaySelect')?parseInt($('pairsDaySelect').value||'0',10):0;
+ closePairScorePicker();
+ syncBracketAfterPairWinner(st.cat);
+ refreshPairsCompositionOnly(keepDay);
+ markUnsaved('pair result cleared');
+ saveData(false);
+ showStatus('🗑 Результат боя очищен');
+}
+window.closePairScorePicker=closePairScorePicker;
+window.aftPairScoreSelectSide=aftPairScoreSelectSide;
+window.aftPairScoreSelectOutcome=aftPairScoreSelectOutcome;
+window.aftPairScoreSelectRound=aftPairScoreSelectRound;
+window.aftPairScoreSave=aftPairScoreSave;
+window.aftPairScoreClear=aftPairScoreClear;
 function openPairScorePicker(cat,key,side){
  const m=getPairMatchByKey(cat,key);
  if(!m){showStatus('❌ Бой не найден',true);return}
@@ -10230,33 +10655,27 @@ function openPairScorePicker(cat,key,side){
    showStatus('❌ Сначала нужно определить победителей предыдущих боёв',true);
    return;
  }
- const winnerId=side==='red'?redId:blueId;
- const winner=getA(winnerId);
  closePairScorePicker();
- window.__pendingPairScore={cat,key,side};
+ const existing=getBracketResult(key,cat);
+ let initOutcome='', initRound=0;
+ if(existing && existing.score){
+   const s=String(existing.score).trim();
+   const rMatch=s.match(/\b([1-5])\s*(?:раунд|р\.?)/i);
+   if(/(ЯП|RSC)(?!-I)/i.test(s)){
+     initOutcome=getPairScoreOptions().find(o=>/(ЯП|RSC)(?!-I)/i.test(o))||'ЯП / RSC';
+     initRound=rMatch?(parseInt(rMatch[1],10)||0):0;
+   }else if(getPairScoreOptions().includes(s)){
+     initOutcome=s;
+   }
+ }
+ window.__pendingPairScore={cat,key,side:side==='blue'?'blue':'red',outcome:initOutcome,round:initRound};
  const modal=document.createElement('div');
  modal.id='pairScoreModal';
  modal.className='pair-score-modal no-print-pairs';
- modal.innerHTML=`<div class="pair-score-box" onclick="event.stopPropagation()">
-   <div class="pair-score-title">💡 Выберите исход боя</div>
-   <div class="pair-score-sub">Победитель: <b>${esc(winner?winner.fio:'спортсмен')}</b><br>Выберите судейское решение или досрочный исход — он сразу сохранится.</div>
-   <div class="pair-score-grid outcome-grid">
-     ${getPairScoreOptions().map(score=>{
-       // v168: ЯП/RSC вызывает модальный выбор раунда, НК/KO сразу записывает нокаут
-       const catE=encodeURIComponent(cat);
-       const keySafe=String(key).replace(/'/g,"\\'");
-       const isYap=/(ЯП|RSC)(?!-I)/i.test(score);
-       const onclick=isYap
-         ? `showRscRoundModal(decodeURIComponent('${catE}'),'${keySafe}','${side}')`
-         : `confirmPairWinnerScore(decodeURIComponent('${catE}'),'${keySafe}','${side}','${score}')`;
-       return `<button class="pair-score-choice outcome-choice ${isYap?'yap-btn':''}" onclick="${onclick}">${score}</button>`;
-     }).join('')}
-   </div>
-   <div class="outcome-note">Поддерживаются решения по очкам: при 5 судьях WP 5-0, 4-1, 3-2; при 3 судьях WP 3-0, 2-1. Досрочные исходы упрощены: ЯП/RSC, НПБ/RSC-I, НК/KO, НЯ/WO, ОТК/ABD, ДСК/DSQ.</div>
-   <button class="pair-score-cancel" onclick="closePairScorePicker()">Отмена</button>
- </div>`;
+ modal.innerHTML='<div class="pair-score-box" role="dialog" aria-modal="true" onclick="event.stopPropagation()"></div>';
  modal.onclick=closePairScorePicker;
  document.body.appendChild(modal);
+ aftPairScoreRender();
 }
 function refreshPairsFilters(){
  const ageSel=$('pairsAgeFilter'), weightSel=$('pairsWeightFilter');
@@ -10926,7 +11345,7 @@ function renderPairsDay(dayIndex, matches, day){
  }).join('');
  const bodyRows=rows || `<tr><td colspan="8" style="text-align:center;font-weight:900;padding:20px">На этот день боёв нет</td></tr>`;
  const manualOrderNotice=manualOrderActive?`<div class="no-print-pairs" style="margin:8px 0 10px;padding:8px 10px;border:1px solid #fbbf24;background:#fffbeb;color:#92400e;border-radius:10px;font-size:12px;font-weight:1000;text-align:center">✋ Ручной порядок пар включён для этого дня · <button class="btn-sm" onclick="resetManualPairsOrderForDay(${dayIndex})">Сбросить порядок дня</button></div>`:'';
- return `<div class="pairs-sheet"><div class="pairs-title">${title}</div><div class="reg-date">${dates}</div><div class="pairs-heading">СОСТАВ ПАР</div><div class="pairs-meta"><div>${esc(getWeekdayRu(day))}, ${esc(formatRuDateWithYear(day))}</div><div style="text-align:center">начало в ${startTime}</div><div style="text-align:right">${venue}</div></div>${manualOrderNotice}<table class="pairs-table">${bodyRows}</table><div class="pairs-sign">ГЛАВНАЯ СУДЕЙСКАЯ КОЛЛЕГИЯ<br>ГЛАВНЫЙ СУДЬЯ СОРЕВНОВАНИЙ ${chiefJudge||'____________________________'}<br>ГЛАВНЫЙ СЕКРЕТАРЬ СОРЕВНОВАНИЙ ${chiefSecretary||'____________________________'}</div></div>`;
+ return `<div class="pairs-sheet"><div class="pairs-title">${title}</div><div class="reg-date">${dates}</div><div class="pairs-heading">СОСТАВ ПАР</div><div class="pairs-meta"><div>${esc(getWeekdayRu(day))}, ${esc(formatRuDateWithYear(day))}</div><div style="text-align:center">начало в ${startTime}</div><div style="text-align:right">${venue}</div></div>${manualOrderNotice}<div class="pairs-table-wrap"><table class="pairs-table">${bodyRows}</table></div><div class="pairs-sign">ГЛАВНАЯ СУДЕЙСКАЯ КОЛЛЕГИЯ<br>ГЛАВНЫЙ СУДЬЯ СОРЕВНОВАНИЙ ${chiefJudge||'____________________________'}<br>ГЛАВНЫЙ СЕКРЕТАРЬ СОРЕВНОВАНИЙ ${chiefSecretary||'____________________________'}</div></div>`;
 }
 
 function generateNextPairsDay(){
@@ -10966,7 +11385,7 @@ const AFT_AFTER_PAIRS_COMPOSITION_HOOKS=[];
   '#pairsSheet .fight-row,#pairsSheet .fight-row.pair-complete-row{background:#ffffff!important}'+
   '#pairsSheet .fight-row:hover{background:#f6f8fb!important}'+
   '#pairsSheet .judge-assignment-summary,#pairsSheet .pair-score-inline{display:none!important}'+
-  '#pairsSheet .pair-win-btn{border-radius:999px!important;font-weight:800!important}'+
+  '#pairsSheet .pair-win-btn{border-radius:999px!important;font-weight:800!important;min-height:44px!important;padding:10px 12px!important;font-size:12.5px!important}'+
   '#pairsSheet .pairs-age-group{background:#dbe6f3!important;color:#0f2a4a!important;border-top:1px solid #1e3a5f!important;border-bottom:1px solid #1e3a5f!important}';
  document.head.appendChild(st);
 })();
@@ -10986,6 +11405,7 @@ function buildPairsPrintDocument(innerHTML,title='Состав пар'){
    .reg-date{text-align:center!important;font-size:11px!important;font-weight:700!important;margin:0 0 5px!important}
    .pairs-heading{text-align:center!important;font-size:16px!important;font-weight:900!important;text-transform:uppercase!important;letter-spacing:.12em!important;margin:6px 0 8px!important}
    .pairs-meta{display:grid!important;grid-template-columns:1fr 110px 1fr!important;gap:8px!important;align-items:center!important;font-size:10px!important;font-weight:800!important;margin:0 0 8px!important;padding:4px 6px!important;background:#f8fafc!important;border:1px solid #dbe3ee!important;border-radius:5px!important}
+   .pairs-table-wrap{overflow:visible!important;border:0!important;border-radius:0!important}
    .pairs-table{width:100%!important;border-collapse:collapse!important;font-size:10px!important}
    .pairs-table td{vertical-align:middle!important}
    .pairs-group{padding:5px 0 3px!important;font-size:11px!important;font-weight:900!important;text-transform:uppercase!important;border-bottom:2px solid #111827!important;color:#111827!important}
@@ -13370,16 +13790,17 @@ function showRscRoundModal(cat, key, side, baseScore){
  var old=document.getElementById('rscRoundModal'); if(old)old.remove();
  var modal=document.createElement('div');
  modal.id='rscRoundModal';
- modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9900;display:flex;align-items:center;justify-content:center';
+ modal.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.56);z-index:9900;display:flex;align-items:center;justify-content:center';
  var catEnc=encodeURIComponent(cat);
  var keySafe=String(key||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
- modal.innerHTML='<div style="background:#fff;border-radius:18px;padding:24px 28px;max-width:340px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,.28);text-align:center;" onclick="event.stopPropagation()">'
+ modal.innerHTML='<div style="background:#fff;border-radius:18px;padding:24px 28px;max-width:360px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,.28);text-align:center;" onclick="event.stopPropagation()">'
+  +'<div class="aft-sheet-handle" aria-hidden="true"></div>'
   +'<div style="font-size:17px;font-weight:900;margin-bottom:6px;color:#1e293b">ЯП / RSC — выберите раунд</div>'
   +'<div style="font-size:13px;color:#64748b;margin-bottom:20px">В каком раунде было явное преимущество?</div>'
   +'<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">'
   +aftRscButtonsHTML() /* v474: кнопки по числу раундов из паспорта (1–5) */
   +'</div>'
-  +'<button onclick="document.getElementById(\'rscRoundModal\').remove()" style="padding:9px 22px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;cursor:pointer;font-weight:800">Отмена</button>'
+  +'<button onclick="document.getElementById(\'rscRoundModal\').remove()" style="width:100%;min-height:46px;padding:10px 22px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;cursor:pointer;font-weight:900">Отмена</button>'
   +'</div>';
  modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
  modal.querySelectorAll('.aft-rsc-btn').forEach(function(bt){bt.onclick=function(){confirmRscRound(cat,key,side,+bt.dataset.r)}});
@@ -13774,99 +14195,234 @@ function aftPruneOldCategoryAfterMove(oldCat,movedId){
   return stat;
  }catch(_e){stat.error=String(_e&&_e.message||_e);return stat}
 }
+function aftCloseWeightModal(){
+ const old=$('weightSelectModal');if(old)old.remove();
+ window.__weightModalState=null;
+}
+function aftSuggestedWeightsForAthlete(sample){
+ const list=[];
+ try{
+   const groups=(typeof getAgeGroups==='function')?getAgeGroups():[];
+   let ag=null;
+   if(sample&&sample.birthYear){
+     const by=parseInt(sample.birthYear,10);
+     ag=groups.find(g=>{const a=Math.min(g.from||0,g.to||0),b=Math.max(g.from||0,g.to||0);return by>=a&&by<=b;});
+   }
+   if(ag){
+     const gender=sample.gender||'М';
+     if(typeof officialBoxingClassesForAgeGroup==='function'){
+       (officialBoxingClassesForAgeGroup(ag,gender)||[]).forEach(x=>{
+         const s=String(x&&x.label||'').replace(/\s*кг$/i,'').trim();
+         if(s)list.push(s);
+       });
+     }
+     const gs=normalizeGender(gender)==='Девочки / женщины'?ag.weightClassesFemale:ag.weightClassesMale;
+     ((gs&&gs.length)?gs:(ag.weightClasses||[])).forEach(w=>{if(w!=null)list.push(String(w));});
+   }
+   (athletes||[]).forEach(a=>{
+     if(sample&&sample.gender&&normalizeGender(a.gender)!==normalizeGender(sample.gender))return;
+     const s=aftSimpleWeightNumberOnly(a.weight||'');
+     if(s)list.push(s);
+   });
+ }catch(_e){}
+ if(list.length<5)['36','38','40','42','44','46','48','50','52','54','57','60','63.5','67','71','75','80','86','92'].forEach(w=>list.push(w));
+ const uniq=[];const seen=new Set();
+ list.forEach(w=>{
+   const clean=String(w||'').trim().replace(',','.');
+   if(!clean||seen.has(clean))return;
+   const n=parseWeightValue(clean);
+   if(isNaN(n)||n<10||n>200)return;
+   seen.add(clean);uniq.push(clean);
+ });
+ uniq.sort((a,b)=>(parseWeightValue(a)-parseWeightValue(b))||(a.indexOf('+')-b.indexOf('+')));
+ return uniq.slice(0,24);
+}
+function aftUpdateWeightModalPreview(){
+ const st=window.__weightModalState;
+ const inp=$('aftWeightModalInput');
+ const prev=$('aftWeightModalPreview');
+ if(!st||!inp||!prev)return;
+ const typed=String(inp.value||'').trim();
+ const modal=$('weightSelectModal');
+ if(modal){
+   const normTyped=typed.replace(',','.');
+   modal.querySelectorAll('.aft-weight-chip').forEach(btn=>{
+     btn.classList.toggle('active',btn.dataset.w===normTyped);
+   });
+ }
+ if(!typed){
+   prev.className='aft-weight-preview';
+   prev.textContent='Выберите вес кнопкой ниже или введите точное число (например: 48 или 37.7)';
+   return;
+ }
+ if(!aftIsSimpleTypedWeightInAllowedRange(typed)){
+   prev.className='aft-weight-preview err';
+   prev.textContent='⚠️ Вес должен быть числом от 10 до 200 кг';
+   return;
+ }
+ const newW=aftWeightCategoryFromSimpleInput(typed);
+ const actualW=formatActualWeightValue(typed);
+ let catText=newW;
+ if(st.sampleAthlete){
+   try{
+     const candCat=categoryKeyOf(Object.assign({},st.sampleAthlete,{actualWeight:actualW,weight:newW}));
+     catText=categoryLabelFromKey(candCat);
+   }catch(_e){}
+ }
+ prev.className='aft-weight-preview';
+ prev.textContent=`→ Категория: ${catText}${actualW?' · Фактический вес: '+actualW:''}`;
+}
+function aftPickWeightChip(val){
+ const inp=$('aftWeightModalInput');
+ if(!inp)return;
+ inp.value=String(val||'');
+ aftUpdateWeightModalPreview();
+}
+function aftSubmitWeightModal(){
+ const st=window.__weightModalState;
+ const inp=$('aftWeightModalInput');
+ if(!st||!inp)return;
+ if(typeof st.onSubmit==='function')st.onSubmit(String(inp.value||'').trim());
+}
+function aftOpenWeightModal(opts){
+ aftCloseWeightModal();
+ window.__weightModalState=opts;
+ const chips=aftSuggestedWeightsForAthlete(opts.sampleAthlete);
+ const modal=document.createElement('div');
+ modal.id='weightSelectModal';
+ modal.className='pair-score-modal no-print-pairs';
+ modal.innerHTML=`<div class="pair-score-box" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+   <div class="aft-sheet-handle" aria-hidden="true"></div>
+   <div class="pair-score-title">${esc(opts.title||'⚖️ Выбор веса')}</div>
+   <div class="pair-score-sub">${esc(opts.subtitle||'')}</div>
+   <div class="aft-sheet-scroll">
+     <input id="aftWeightModalInput" class="aft-weight-input" type="text" inputmode="decimal" autocomplete="off" placeholder="Например: 48 или 37.7" value="${esc(opts.initialValue||'')}" oninput="aftUpdateWeightModalPreview()">
+     <div id="aftWeightModalPreview" class="aft-weight-preview"></div>
+     <div style="font-size:12px;font-weight:900;color:#475569;margin-top:12px">Быстрый выбор весовой категории (кг):</div>
+     <div class="aft-weight-chips">${chips.map(w=>`<button type="button" class="aft-weight-chip" data-w="${esc(w)}" onclick="aftPickWeightChip('${esc(w)}')">${esc(w)} кг</button>`).join('')}</div>
+   </div>
+   <div class="aft-sheet-footer">
+     <button type="button" class="aft-sheet-save-btn" onclick="aftSubmitWeightModal()">✅ Сохранить вес</button>
+     <div class="aft-sheet-footer-row">
+       <button type="button" class="pair-score-cancel" onclick="aftCloseWeightModal()">Отмена</button>
+     </div>
+   </div>
+ </div>`;
+ modal.onclick=aftCloseWeightModal;
+ document.body.appendChild(modal);
+ const inp=$('aftWeightModalInput');
+ if(inp){
+   inp.addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();aftSubmitWeightModal();}});
+   if(window.innerWidth>760)setTimeout(()=>{try{inp.focus();inp.select();}catch(_e){}},40);
+ }
+ aftUpdateWeightModalPreview();
+}
+window.aftCloseWeightModal=aftCloseWeightModal;
+window.aftUpdateWeightModalPreview=aftUpdateWeightModalPreview;
+window.aftPickWeightChip=aftPickWeightChip;
+window.aftSubmitWeightModal=aftSubmitWeightModal;
 function moveAthlete(id){
  const a=getA(id); if(!a)return;
  const oldCat=categoryKeyOf(a), oldWeight=a.weight||'', oldActualWeight=a.actualWeight||'';
  const oldForceMergeSnapshot=getForceMergeOverrideSnapshot(a);
- const raw=prompt(
-   'Введите новый вес спортсмена цифрами.\n\nНапример: 48 или 37.7\nКГ писать не нужно — система сама определит весовую категорию.',
-   // v263: по умолчанию показываем фактический вес, если он уже есть.
-   // Иначе повторное открытие окна могло подставить лимит категории (например 48)
-   // и случайно перезаписать корректный факт 47,7 на 48.
-   aftSimpleWeightNumberOnly(oldActualWeight || oldWeight)
- );
- if(raw===null)return;
- const typed=String(raw||'').trim();
- if(!aftIsSimpleTypedWeightInAllowedRange(typed)){
-   showStatus('❌ Вес должен быть числом от 10 до 200 кг. Введено: «'+typed+'»',true);
-   return;
- }
- const newWeight=aftWeightCategoryFromSimpleInput(typed);
- if(!newWeight || newWeight==='Без веса'){
-   showStatus('❌ Вес не указан. Введите число, например 48 или 37.7',true);
-   return;
- }
- const newActualWeight=formatActualWeightValue(typed);
- const __candCat=categoryKeyOf(Object.assign({},a,{actualWeight:newActualWeight,weight:newWeight})); /* v493 (#21): категория кандидата с новым фактическим весом */
-  if(newWeight===oldWeight && __candCat===oldCat){
-   // v262: если официальный весовой лимит не изменился, всё равно сохраняем фактический вес.
-   // Пример: было "48 кг", спортсмен ввёл 47,7 — категория остаётся 48 кг,
-   // но карточка участника и документы должны показывать новый фактический вес.
-   if(newActualWeight && newActualWeight!==oldActualWeight){
-     pushUndo('изменение фактического веса '+(a.fio||''));
+ aftOpenWeightModal({
+   title:'⚖️ Изменить вес: '+(a.fio||'спортсмен'),
+   subtitle:'Текущая категория: '+categoryLabelFromKey(oldCat)+(oldActualWeight?' · факт: '+oldActualWeight:''),
+   initialValue:aftSimpleWeightNumberOnly(oldActualWeight || oldWeight),
+   sampleAthlete:a,
+   onSubmit:function(typed){
+     if(!aftIsSimpleTypedWeightInAllowedRange(typed)){
+       showStatus('❌ Вес должен быть числом от 10 до 200 кг. Введено: «'+typed+'»',true);
+       aftUpdateWeightModalPreview();
+       return;
+     }
+     const newWeight=aftWeightCategoryFromSimpleInput(typed);
+     if(!newWeight || newWeight==='Без веса'){
+       showStatus('❌ Вес не указан. Введите число, например 48 или 37.7',true);
+       return;
+     }
+     const newActualWeight=formatActualWeightValue(typed);
+     const __candCat=categoryKeyOf(Object.assign({},a,{actualWeight:newActualWeight,weight:newWeight})); /* v493 (#21): категория кандидата с новым фактическим весом */
+     if(newWeight===oldWeight && __candCat===oldCat){
+       // v262: если официальный весовой лимит не изменился, всё равно сохраняем фактический вес.
+       if(newActualWeight && newActualWeight!==oldActualWeight){
+         pushUndo('изменение фактического веса '+(a.fio||''));
+         a.actualWeight=newActualWeight;
+         refreshAll();
+         if($('athleteSearch')&&String($('athleteSearch').value||'').trim())searchAthletes();
+         try{generateRegulation();}catch(_){ }
+         addAction('change_actual_weight',`${a.fio||'спортсмен'}: факт ${oldActualWeight||'не указан'} → ${newActualWeight} · категория ${oldWeight}`);
+         saveData(false);
+         aftCloseWeightModal();
+         showStatus(`✅ Фактический вес обновлён: ${oldActualWeight||'не указан'} → ${newActualWeight}. Категория осталась: ${oldWeight}`);
+         return;
+       }
+       aftCloseWeightModal();
+       showStatus('⚖️ Весовая категория и фактический вес не изменились: '+newWeight,true);
+       return;
+     }
+     if(!v146NotifyDrawProtection(oldCat,'Изменение веса спортсмена может повлиять на старую сетку.'))return;
+     pushUndo('изменение веса '+(a.fio||''));
+     a.weight=newWeight;
      a.actualWeight=newActualWeight;
+     clearForceMergeOverride(a);
+     const newCat=categoryKeyOf(a);
+     if(!v146NotifyDrawProtection(newCat,'Спортсмен будет перенесён в новую весовую категорию.')){a.weight=oldWeight;a.actualWeight=oldActualWeight;restoreForceMergeOverride(a,oldForceMergeSnapshot);return;}
+     currentCategory=newCat;
+     v146ProtectChangedCategories([oldCat,newCat],'move athlete simple weight');
+     /* v493 (#21): старая сетка и её результаты содержат перенесённого спортсмена — они больше не совместимы */
+     if(oldCat!==newCat){try{aftPruneOldCategoryAfterMove(oldCat,a.id);}catch(_e){}} /* v498 (№2) */
+     try{v148InvalidateCaches();}catch(_){ }
+     drawOrder=getDrawOrderForCategory(currentCategory);
      refreshAll();
+     if($('athleteSearch')&&String($('athleteSearch').value||'').trim())searchAthletes();
      try{generateRegulation();}catch(_){ }
-     addAction('change_actual_weight',`${a.fio||'спортсмен'}: факт ${oldActualWeight||'не указан'} → ${newActualWeight} · категория ${oldWeight}`);
+     addAction('move_athlete',`${a.fio||'спортсмен'}: ${oldWeight} → ${newWeight} (ввод: ${typed})`);
      saveData(false);
-     showStatus(`✅ Фактический вес обновлён: ${oldActualWeight||'не указан'} → ${newActualWeight}. Категория осталась: ${oldWeight}`);
-     return;
+     aftCloseWeightModal();
+     showStatus(`✅ ${a.fio||'Спортсмен'} перенесён: ${oldWeight} → ${newWeight}${typed && typed!==newWeight?' · ввод: '+typed:''}`);
    }
-   showStatus('⚖️ Весовая категория и фактический вес не изменились: '+newWeight,true);
-   return;
- }
- if(!v146NotifyDrawProtection(oldCat,'Изменение веса спортсмена может повлиять на старую сетку.'))return;
- pushUndo('изменение веса '+(a.fio||''));
- a.weight=newWeight;
- a.actualWeight=newActualWeight;
- clearForceMergeOverride(a);
- const newCat=categoryKeyOf(a);
- if(!v146NotifyDrawProtection(newCat,'Спортсмен будет перенесён в новую весовую категорию.')){a.weight=oldWeight;a.actualWeight=oldActualWeight;restoreForceMergeOverride(a,oldForceMergeSnapshot);return;}
- currentCategory=newCat;
- v146ProtectChangedCategories([oldCat,newCat],'move athlete simple weight');
-  /* v493 (#21): старая сетка и её результаты содержат перенесённого спортсмена — они больше не совместимы */
-  if(oldCat!==newCat){try{aftPruneOldCategoryAfterMove(oldCat,a.id);}catch(_e){}} /* v498 (№2) */
- try{v148InvalidateCaches();}catch(_){ }
- drawOrder=getDrawOrderForCategory(currentCategory);
- refreshAll();
- try{generateRegulation();}catch(_){ }
- addAction('move_athlete',`${a.fio||'спортсмен'}: ${oldWeight} → ${newWeight} (ввод: ${typed})`);
- saveData(false);
- showStatus(`✅ ${a.fio||'Спортсмен'} перенесён: ${oldWeight} → ${newWeight}${typed && typed!==newWeight?' · ввод: '+typed:''}`);
+ });
 }
 function bulkMoveAthletes(){
  const ids=[...selectedAthletes].filter(id=>getA(id));
  if(!ids.length){showStatus('❌ Сначала выделите спортсменов галочками',true);return}
- const raw=prompt(
-   'Введите новый вес для выбранных спортсменов цифрами.\n\nНапример: 48 или 37.7\nКГ писать не нужно — система сама определит весовую категорию.\n\nВыбрано спортсменов: '+ids.length,
-   currentCategory?aftSimpleWeightNumberOnly(categoryWeightFromKey(currentCategory)):''
- );
- if(raw===null)return;
- const typed=String(raw||'').trim();
- if(!aftIsSimpleTypedWeightInAllowedRange(typed)){
-   showStatus('❌ Вес должен быть числом от 10 до 200 кг. Введено: «'+typed+'»',true);
-   return;
- }
- const newWeight=aftWeightCategoryFromSimpleInput(typed);
- if(!newWeight || newWeight==='Без веса'){
-   showStatus('❌ Вес не указан. Введите число, например 48 или 37.7',true);
-   return;
- }
- const oldCats=[...new Set(ids.map(id=>getA(id)).filter(Boolean).map(a=>categoryKeyOf(a)))];
- if(oldCats.some(v146CategoryWasDrawn) && !confirm('🔒 Среди выбранных спортсменов есть уже прожереблённые категории.\n\nСистема сохранит сетки и удалит только несовместимые результаты. Продолжить?'))return;
- pushUndo('массовое изменение веса спортсменов');
- ids.forEach(id=>{const a=getA(id); if(a){a.weight=newWeight;a.actualWeight=formatActualWeightValue(typed);clearForceMergeOverride(a);}});
- const newCats=[...new Set(ids.map(id=>getA(id)).filter(Boolean).map(a=>categoryKeyOf(a)))];
- currentCategory=newCats[0]||currentCategory;
- selectedAthletes.clear();
- v146ProtectChangedCategories(oldCats.concat(newCats),'bulk move simple weight');
- try{v148InvalidateCaches();}catch(_){ }
- drawOrder=getDrawOrderForCategory(currentCategory);
- refreshAll();
- try{generateRegulation();}catch(_){ }
- addAction('bulk_move','Перенесено спортсменов: '+ids.length+' → '+newWeight+' (ввод: '+typed+')');
- saveData(false);
- showStatus(`✅ Перенесено спортсменов: ${ids.length} → ${newWeight}${typed && typed!==newWeight?' · ввод: '+typed:''}`);
+ const sample=getA(ids[0])||null;
+ aftOpenWeightModal({
+   title:'⚖️ Перенести выбранных ('+ids.length+' чел.)',
+   subtitle:'Введите точный вес или выберите новую категорию для всех отмеченных спортсменов',
+   initialValue:currentCategory?aftSimpleWeightNumberOnly(categoryWeightFromKey(currentCategory)):'',
+   sampleAthlete:sample,
+   onSubmit:function(typed){
+     if(!aftIsSimpleTypedWeightInAllowedRange(typed)){
+       showStatus('❌ Вес должен быть числом от 10 до 200 кг. Введено: «'+typed+'»',true);
+       aftUpdateWeightModalPreview();
+       return;
+     }
+     const newWeight=aftWeightCategoryFromSimpleInput(typed);
+     if(!newWeight || newWeight==='Без веса'){
+       showStatus('❌ Вес не указан. Введите число, например 48 или 37.7',true);
+       return;
+     }
+     const oldCats=[...new Set(ids.map(id=>getA(id)).filter(Boolean).map(a=>categoryKeyOf(a)))];
+     if(oldCats.some(v146CategoryWasDrawn) && !confirm('🔒 Среди выбранных спортсменов есть уже прожереблённые категории.\n\nСистема сохранит сетки и удалит только несовместимые результаты. Продолжить?'))return;
+     pushUndo('массовое изменение веса спортсменов');
+     ids.forEach(id=>{const a=getA(id); if(a){a.weight=newWeight;a.actualWeight=formatActualWeightValue(typed);clearForceMergeOverride(a);}});
+     const newCats=[...new Set(ids.map(id=>getA(id)).filter(Boolean).map(a=>categoryKeyOf(a)))];
+     currentCategory=newCats[0]||currentCategory;
+     selectedAthletes.clear();
+     v146ProtectChangedCategories(oldCats.concat(newCats),'bulk move simple weight');
+     try{v148InvalidateCaches();}catch(_){ }
+     drawOrder=getDrawOrderForCategory(currentCategory);
+     refreshAll();
+     if($('athleteSearch')&&String($('athleteSearch').value||'').trim())searchAthletes();
+     try{generateRegulation();}catch(_){ }
+     addAction('bulk_move','Перенесено спортсменов: '+ids.length+' → '+newWeight+' (ввод: '+typed+')');
+     saveData(false);
+     aftCloseWeightModal();
+     showStatus(`✅ Перенесено спортсменов: ${ids.length} → ${newWeight}${typed && typed!==newWeight?' · ввод: '+typed:''}`);
+   }
+ });
 }
 function deleteAthlete(id){
  const a=getA(id); if(!a)return;
@@ -14960,7 +15516,7 @@ function v172PairsEmptySheet(dayIndex,day,kind,rawCount,totalCount){
      action='<button class="btn primary no-print-pairs" onclick="showAllDraws()">🎲 Проверить жеребьёвку</button> <button class="btn success no-print-pairs" onclick="generateRegulation(true);generatePairsComposition(0)">🔄 Пересоздать регламент и состав пар</button>';
    }
  }
- return `<div class="pairs-sheet"><div class="pairs-title">${title}</div><div class="reg-date">${dates}</div><div class="pairs-heading">СОСТАВ ПАР</div><div class="pairs-meta"><div>${esc(getWeekdayRu(day))}, ${esc(formatRuDateWithYear(day))}</div><div style="text-align:center">начало в ${startTime}</div><div style="text-align:right">${venue}</div></div><table class="pairs-table"><tr><td colspan="8" style="text-align:center;font-weight:900;padding:20px;line-height:1.45">${message}<div style="margin-top:12px">${action}</div></td></tr></table><div class="pairs-sign">ГЛАВНАЯ СУДЕЙСКАЯ КОЛЛЕГИЯ<br>ГЛАВНЫЙ СУДЬЯ СОРЕВНОВАНИЙ ${chiefJudge||'____________________________'}<br>ГЛАВНЫЙ СЕКРЕТАРЬ СОРЕВНОВАНИЙ ${chiefSecretary||'____________________________'}</div></div>`;
+ return `<div class="pairs-sheet"><div class="pairs-title">${title}</div><div class="reg-date">${dates}</div><div class="pairs-heading">СОСТАВ ПАР</div><div class="pairs-meta"><div>${esc(getWeekdayRu(day))}, ${esc(formatRuDateWithYear(day))}</div><div style="text-align:center">начало в ${startTime}</div><div style="text-align:right">${venue}</div></div><div class="pairs-table-wrap"><table class="pairs-table"><tr><td colspan="8" style="text-align:center;font-weight:900;padding:20px;line-height:1.45">${message}<div style="margin-top:12px">${action}</div></td></tr></table></div><div class="pairs-sign">ГЛАВНАЯ СУДЕЙСКАЯ КОЛЛЕГИЯ<br>ГЛАВНЫЙ СУДЬЯ СОРЕВНОВАНИЙ ${chiefJudge||'____________________________'}<br>ГЛАВНЫЙ СЕКРЕТАРЬ СОРЕВНОВАНИЙ ${chiefSecretary||'____________________________'}</div></div>`;
 }
 /* v390: тело generatePairsComposition (бывший слой v326) */
 function aftPairsCompositionCore(dayIndex=null){
@@ -15769,6 +16325,8 @@ function v190RenderPresencePanel(){
  if(!box)return;
   /* v478: ID судьи не вставляется в JavaScript-код. Один обработчик на контейнер, ID читается из data-атрибута как строка. */
   if(!box.__jpDeleg){box.__jpDeleg=1;box.addEventListener('change',function(ev){var t=ev.target;if(!t||!t.matches||!t.matches('input[data-jp-id]'))return;v190ToggleJudgePresence(parseInt(t.dataset.jpIdx,10)||0,t.dataset.jpId,t.checked)})}
+ const prevListEl=box.querySelector('.aft-day-presence-list');
+ const prevListScrollTop=prevListEl?prevListEl.scrollTop:0;
  const idx=v190CurrentDayIndex();
  const ctx=v190Context(idx);
  const rec=v190PresenceRecord(idx,true);
@@ -15787,7 +16345,9 @@ function v190RenderPresencePanel(){
  }).join(''):'<div class="aft-day-presence-bad">Судейская бригада не заполнена. Откройте паспорт турнира и внесите судей.</div>';
  const statusClass=confirmed?(absent?'aft-day-presence-bad':'aft-day-presence-ok'):(check.ok?'aft-day-presence-warn':'aft-day-presence-bad');
  const statusText=confirmed?(absent?'В назначениях есть отсутствующие судьи. Нужно переназначить день.':'Судьи на день подтверждены. Можно печатать судейские документы после распределения.'):(check.ok?'Отметьте фактически присутствующих и нажмите подтверждение.':check.msg);
- box.innerHTML=`<div class="aft-day-presence-head"><div><b>✅ Судьи, присутствующие на выбранный боевой день</b><br><span>День ${idx+1}${ctx.day?' · '+esc(v190DateForDay(idx)):''} · боёв: ${ctx.matches.length}</span></div><span>${confirmed?'подтверждено':'нужно подтвердить'}</span></div><div class="aft-day-presence-stats"><span>Всего судей: ${pool.length}</span><span>Отмечено: ${(rec.presentIds||[]).length}</span><span>Рефери доступны: ${check.refs?check.refs.length:0}</span><span>Боковые доступны: ${check.sides?check.sides.length:0}</span><span>Назначений не хватает: ${missing}</span></div><div class="${statusClass}">${esc(statusText)}</div><div class="aft-day-presence-list">${rows}</div><div class="aft-day-presence-actions"><button class="btn-sm" onclick="setAllJudgesPresentForDay(true)">Отметить всех</button><button class="btn-sm" onclick="setAllJudgesPresentForDay(false)">Снять всех</button><button class="btn-sm" onclick="confirmJudgePresenceForSelectedDay()">✅ Подтвердить судей на день</button></div>`;
+ box.innerHTML=`<div class="aft-day-presence-head"><div><b>✅ Судьи, присутствующие на выбранный боевой день</b><br><span>День ${idx+1}${ctx.day?' · '+esc(v190DateForDay(idx)):''} · боёв: ${ctx.matches.length}</span></div><span>${confirmed?'подтверждено':'нужно подтвердить'}</span></div><div class="aft-day-presence-stats"><span>Всего судей: ${pool.length}</span><span>Отмечено: ${(rec.presentIds||[]).length}</span><span>Рефери доступны: ${check.refs?check.refs.length:0}</span><span>Боковые доступны: ${check.sides?check.sides.length:0}</span><span>Назначений не хватает: ${missing}</span></div><div class="${statusClass}">${esc(statusText)}</div><div class="aft-day-presence-list">${rows}</div><div class="aft-day-presence-actions"><button type="button" class="btn-sm" onclick="setAllJudgesPresentForDay(true)">Отметить всех</button><button type="button" class="btn-sm" onclick="setAllJudgesPresentForDay(false)">Снять всех</button><button type="button" class="btn-sm btn success aft-day-presence-confirm" onclick="confirmJudgePresenceForSelectedDay()">✅ Подтвердить судей на день</button></div>`;
+ const nextListEl=box.querySelector('.aft-day-presence-list');
+ if(nextListEl&&prevListScrollTop)nextListEl.scrollTop=prevListScrollTop;
 }
 function v190RequireDailyDoc(kind){
  // v321-FIX: previewOfficialDoc для того же kind уже использует пассивную v191RequireDailyDoc
@@ -16080,7 +16640,7 @@ function v190InstallDocsNotes(){try{document.querySelectorAll('.docs-card').forE
 /* v392: захват renderDocumentsDesk удалён */
 AFT_AFTER_RENDER_DOCUMENTS_DESK_HOOKS.push(function(){setTimeout(v190InstallDocsNotes,0)}); /* v392: вместо обёртки renderDocumentsDesk (v191) */
 window.renderDocumentsDesk=renderDocumentsDesk;
-function v190InstallStyle(){if(document.getElementById('aftV190JudgePresenceStyle'))return;const st=document.createElement('style');st.id='aftV190JudgePresenceStyle';st.textContent='.aft-day-presence-panel{border:1px solid #bfdbfe;background:#fff;border-radius:14px;padding:12px;margin:10px 0;color:#0f172a}.aft-day-presence-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}.aft-day-presence-head b{color:#1d4ed8}.aft-day-presence-head span{font-size:12px;font-weight:900;color:#475569}.aft-day-presence-stats{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.aft-day-presence-stats span{border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:900;color:#334155}.aft-day-presence-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px;max-height:220px;overflow:auto;margin-top:8px;padding-right:2px}.aft-day-judge-row{display:flex!important;align-items:flex-start;gap:8px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:10px;padding:8px!important;margin:0!important;font-size:12px;font-weight:800;color:#0f172a}.aft-day-judge-row input{width:18px!important;height:18px!important;margin:1px 0 0!important;flex:none}.aft-day-judge-row b{display:block;font-size:12px;line-height:1.15}.aft-day-judge-row small{display:block;color:#64748b;font-size:10.5px;line-height:1.2;margin-top:2px}.aft-day-presence-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.aft-day-presence-ok,.aft-day-presence-warn,.aft-day-presence-bad{border-radius:10px;padding:7px 9px;margin:6px 0;font-size:12px;font-weight:900;line-height:1.3}.aft-day-presence-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}.aft-day-presence-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}.aft-day-presence-bad{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}@media(max-width:760px){.aft-day-presence-head{display:block}.aft-day-presence-list{grid-template-columns:1fr;max-height:280px}}@media print{.aft-day-presence-panel{display:none!important}}';document.head.appendChild(st)}
+function v190InstallStyle(){if(document.getElementById('aftV190JudgePresenceStyle'))return;const st=document.createElement('style');st.id='aftV190JudgePresenceStyle';st.textContent='.aft-day-presence-panel{display:flex;flex-direction:column;border:1px solid #bfdbfe;background:#fff;border-radius:14px;padding:12px;margin:10px 0;color:#0f172a}.aft-day-presence-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}.aft-day-presence-head b{color:#1d4ed8}.aft-day-presence-head span{font-size:12px;font-weight:900;color:#475569}.aft-day-presence-stats{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.aft-day-presence-stats span{border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:900;color:#334155}.aft-day-presence-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px;flex:1 1 auto;min-height:0;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-top:8px;padding-right:2px}.aft-day-judge-row{display:flex!important;align-items:center;gap:10px;min-height:44px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:10px;padding:9px 10px!important;margin:0!important;font-size:12px;font-weight:800;color:#0f172a;cursor:pointer}.aft-day-judge-row input{width:22px!important;height:22px!important;margin:0!important;flex:none}.aft-day-judge-row b{display:block;font-size:12.5px;line-height:1.15}.aft-day-judge-row small{display:block;color:#64748b;font-size:10.5px;line-height:1.2;margin-top:2px}.aft-day-presence-actions{position:sticky;bottom:0;z-index:6;display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;padding:10px 0 calc(4px + env(safe-area-inset-bottom));background:rgba(255,255,255,.97);border-top:1px solid #dbeafe}.aft-day-presence-actions button{min-height:44px;padding:9px 12px;font-size:13px;font-weight:900;flex:1 1 auto;touch-action:manipulation}.aft-day-presence-ok,.aft-day-presence-warn,.aft-day-presence-bad{border-radius:10px;padding:7px 9px;margin:6px 0;font-size:12px;font-weight:900;line-height:1.3}.aft-day-presence-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}.aft-day-presence-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}.aft-day-presence-bad{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}@media(max-width:760px){.aft-day-presence-head{display:block}.aft-day-presence-list{grid-template-columns:1fr;max-height:44vh;max-height:44dvh}.aft-day-presence-actions .aft-day-presence-confirm{flex:1 0 100%}}@media print{.aft-day-presence-panel{display:none!important}}';document.head.appendChild(st)}
 
 /* ===== v200 PRESENCE MODAL CORE STABLE =====
    Простая стабильная проверка присутствующих судей без внешних слоёв v192-v199.
@@ -16093,7 +16653,7 @@ function v200InstallPresenceStyle(){
   const st=document.createElement('style');
   st.id='aftV200PresenceStyle';
   st.textContent=`
-  .aft-v200-presence-btn{display:block;width:100%;margin:10px 0 8px;padding:14px 15px;border:0;border-radius:16px;background:linear-gradient(135deg,#16a34a,#0f766e);color:#fff;font-weight:1000;font-size:14px;text-align:left;box-shadow:0 10px 22px rgba(22,163,74,.18);cursor:pointer;line-height:1.15}.aft-v200-presence-btn small{display:block;margin-top:4px;color:rgba(255,255,255,.9);font-size:10.5px;font-weight:800}.aft-v200-status{border-radius:12px;padding:9px 11px;margin:8px 0;font-size:12px;font-weight:900;line-height:1.3}.aft-v200-status.ok{background:#f0fdf4;border:1px solid #86efac;color:#166534}.aft-v200-status.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}.aft-v200-status.bad{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}.aft-v200-modal-backdrop{position:fixed;inset:0;z-index:999999;background:rgba(15,23,42,.58);display:flex;align-items:flex-start;justify-content:center;padding:14px;overflow:auto}.aft-v200-modal{width:min(960px,100%);background:#fff;border-radius:20px;border:1px solid #e2e8f0;box-shadow:0 24px 70px rgba(15,23,42,.35);overflow:hidden;color:#0f172a}.aft-v200-modal-head{display:flex;justify-content:space-between;gap:12px;padding:16px 18px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff}.aft-v200-modal-head h2{margin:0;font-size:19px;color:#fff}.aft-v200-modal-head p{margin:5px 0 0;font-size:12px;line-height:1.35;color:#dbeafe;font-weight:800}.aft-v200-close{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;border-radius:12px;padding:8px 11px;font-weight:900;cursor:pointer}.aft-v200-modal-body{padding:14px}.aft-v200-modal-status{border-radius:12px;padding:9px 11px;font-weight:900;font-size:13px;margin-bottom:10px}.aft-v200-modal-status.ok{background:#f0fdf4;border:1px solid #86efac;color:#166534}.aft-v200-modal-status.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}.aft-v200-modal-status.bad{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}.aft-v200-stats{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.aft-v200-stats span{border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:900;color:#334155}.aft-v200-judge-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px;max-height:46vh;overflow:auto;margin-top:8px;padding-right:2px}.aft-v200-judge-row{display:flex!important;align-items:flex-start;gap:8px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:10px;padding:8px!important;margin:0!important;font-size:12px;font-weight:800;color:#0f172a}.aft-v200-judge-row input{width:18px!important;height:18px!important;margin:1px 0 0!important;flex:none}.aft-v200-judge-row b{display:block;font-size:12px;line-height:1.15}.aft-v200-judge-row small{display:block;color:#64748b;font-size:10.5px;line-height:1.2;margin-top:2px}.aft-v200-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.aft-v200-bad{border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:12px;padding:10px;font-weight:900}@media(max-width:760px){.aft-v200-modal-head{display:block}.aft-v200-close{margin-top:10px}.aft-v200-judge-list{grid-template-columns:1fr;max-height:50vh}}@media print{.aft-v200-presence-btn,.aft-v200-status,.aft-v200-modal-backdrop{display:none!important}}`;
+  .aft-v200-presence-btn{display:block;width:100%;margin:10px 0 8px;padding:14px 15px;border:0;border-radius:16px;background:linear-gradient(135deg,#16a34a,#0f766e);color:#fff;font-weight:1000;font-size:14px;text-align:left;box-shadow:0 10px 22px rgba(22,163,74,.18);cursor:pointer;line-height:1.15}.aft-v200-presence-btn small{display:block;margin-top:4px;color:rgba(255,255,255,.9);font-size:10.5px;font-weight:800}.aft-v200-status{border-radius:12px;padding:9px 11px;margin:8px 0;font-size:12px;font-weight:900;line-height:1.3}.aft-v200-status.ok{background:#f0fdf4;border:1px solid #86efac;color:#166534}.aft-v200-status.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}.aft-v200-status.bad{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}.aft-v200-modal-backdrop{position:fixed;inset:0;z-index:999999;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;padding:14px;overflow:hidden}.aft-v200-modal{width:min(960px,100%);max-height:90vh;max-height:90dvh;display:flex;flex-direction:column;background:#fff;border-radius:20px;border:1px solid #e2e8f0;box-shadow:0 24px 70px rgba(15,23,42,.35);overflow:hidden;color:#0f172a}.aft-v200-modal-head{flex:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:16px 18px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff}.aft-v200-modal-head h2{margin:0;font-size:19px;color:#fff}.aft-v200-modal-head p{margin:5px 0 0;font-size:12px;line-height:1.35;color:#dbeafe;font-weight:800}.aft-v200-close{flex:0 0 auto;min-height:44px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;border-radius:12px;padding:8px 12px;font-weight:900;cursor:pointer}.aft-v200-modal-body{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden;padding:0}.aft-v200-body-top{flex:0 0 auto;padding:12px 14px 4px}.aft-v200-modal-status{border-radius:12px;padding:9px 11px;font-weight:900;font-size:13px;margin-bottom:8px}.aft-v200-modal-status.ok{background:#f0fdf4;border:1px solid #86efac;color:#166534}.aft-v200-modal-status.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}.aft-v200-modal-status.bad{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}.aft-v200-stats{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.aft-v200-stats span{border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:900;color:#334155}.aft-v200-judge-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px;flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 14px}.aft-v200-judge-row{display:flex!important;align-items:center;gap:10px;min-height:44px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:10px;padding:9px 10px!important;margin:0!important;font-size:12px;font-weight:800;color:#0f172a;cursor:pointer}.aft-v200-judge-row input{width:22px!important;height:22px!important;margin:0!important;flex:none}.aft-v200-judge-row b{display:block;font-size:12.5px;line-height:1.15}.aft-v200-judge-row small{display:block;color:#64748b;font-size:10.5px;line-height:1.2;margin-top:2px}.aft-v200-actions{flex:0 0 auto;position:sticky;bottom:0;z-index:6;display:flex;gap:8px;flex-wrap:wrap;margin-top:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e2e8f0}.aft-v200-actions button{min-height:44px;touch-action:manipulation}.aft-v200-bad{border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:12px;padding:10px;font-weight:900}@media(max-width:760px){.aft-v200-modal-backdrop{padding:0;align-items:flex-end}.aft-v200-modal{width:100%;max-width:100%;max-height:94dvh;border-radius:20px 20px 0 0}.aft-v200-modal-head{padding:12px 14px}.aft-v200-modal-head h2{font-size:16px}.aft-v200-judge-list{grid-template-columns:1fr}.aft-v200-actions button{flex:1 1 46%;justify-content:center}.aft-v200-actions .btn.success,.aft-v200-actions .btn.primary{flex:1 0 100%}}@media print{.aft-v200-presence-btn,.aft-v200-status,.aft-v200-modal-backdrop{display:none!important}}`;
   document.head.appendChild(st);
 }
 function v200PresenceSummary(){
@@ -16134,6 +16694,8 @@ function v200InstallDocsControls(){
 function v200RenderPresenceModal(){
   const body=$('aftV200PresenceBody');
   if(!body)return;
+  const prevListEl=body.querySelector('.aft-v200-judge-list');
+  const prevScroll=prevListEl?prevListEl.scrollTop:0;
   const sm=v200PresenceSummary();
   const idx=sm.idx;
   let pool=[];try{pool=getJudgePool()||[];}catch(e){}
@@ -16149,16 +16711,20 @@ function v200RenderPresenceModal(){
   const statusClass=sm.confirmed?(sm.absent.length?'bad':'ok'):(sm.check.ok?'warn':'bad');
   const statusText=sm.confirmed?(sm.absent.length?'Есть назначения на отсутствующих судей. Переназначьте день.':'Список присутствующих судей подтверждён.'):(sm.check.ok?'Отметьте фактически присутствующих судей и нажмите подтверждение.':sm.check.msg);
   body.innerHTML=`
-    <div class="aft-v200-modal-status ${statusClass}">${docSafe(statusText||'')}</div>
-    <div class="aft-v200-stats"><span>День: ${idx+1}</span><span>Боёв: ${(sm.ctx.matches||[]).length}</span><span>Всего судей: ${pool.length}</span><span>Отмечено: ${(rec.presentIds||[]).length}</span><span>Рефери: ${(sm.check.refs||[]).length}</span><span>Боковые: ${(sm.check.sides||[]).length}</span></div>
+    <div class="aft-v200-body-top">
+      <div class="aft-v200-modal-status ${statusClass}">${docSafe(statusText||'')}</div>
+      <div class="aft-v200-stats"><span>День: ${idx+1}</span><span>Боёв: ${(sm.ctx.matches||[]).length}</span><span>Всего судей: ${pool.length}</span><span>Отмечено: ${(rec.presentIds||[]).length}</span><span>Рефери: ${(sm.check.refs||[]).length}</span><span>Боковые: ${(sm.check.sides||[]).length}</span></div>
+    </div>
     <div class="aft-v200-judge-list">${rows}</div>
     <div class="aft-v200-actions">
-      <button class="btn-sm" onclick="return window.aftV200JudgePresenceAction('setAll',event,true)">Отметить всех</button>
-      <button class="btn-sm" onclick="return window.aftV200JudgePresenceAction('setAll',event,false)">Снять всех</button>
-      <button class="btn success" onclick="return window.aftV200JudgePresenceAction('confirm',event)">✅ Подтвердить присутствующих судей</button>
-      <button class="btn primary" onclick="return window.aftV200JudgePresenceAction('auto',event)">⚙️ Распределить судей на выбранный день</button>
-      <button class="btn" onclick="return window.aftV200JudgePresenceAction('close',event)">Закрыть</button>
+      <button type="button" class="btn-sm" onclick="return window.aftV200JudgePresenceAction('setAll',event,true)">Отметить всех</button>
+      <button type="button" class="btn-sm" onclick="return window.aftV200JudgePresenceAction('setAll',event,false)">Снять всех</button>
+      <button type="button" class="btn success" onclick="return window.aftV200JudgePresenceAction('confirm',event)">✅ Подтвердить присутствующих судей</button>
+      <button type="button" class="btn primary" onclick="return window.aftV200JudgePresenceAction('auto',event)">⚙️ Распределить судей на выбранный день</button>
+      <button type="button" class="btn" onclick="return window.aftV200JudgePresenceAction('close',event)">Закрыть</button>
     </div>`;
+  const nextListEl=body.querySelector('.aft-v200-judge-list');
+  if(nextListEl&&prevScroll)nextListEl.scrollTop=prevScroll;
 }
 function aftV200OpenJudgePresenceModal(){
   v200InstallPresenceStyle();
@@ -16167,7 +16733,8 @@ function aftV200OpenJudgePresenceModal(){
     wrap=document.createElement('div');
     wrap.id='aftV200PresenceModal';
     wrap.className='aft-v200-modal-backdrop';
-    wrap.innerHTML=`<div class="aft-v200-modal"><div class="aft-v200-modal-head"><div><h2>✅ Проверка присутствующих судей</h2><p>Отметьте судей, которые фактически присутствуют на выбранный боевой день. Только после подтверждения и распределения система допускает судейские документы.</p></div><button class="aft-v200-close" onclick="return window.aftV200JudgePresenceAction('close',event)">Закрыть</button></div><div id="aftV200PresenceBody" class="aft-v200-modal-body"></div></div>`;
+    wrap.innerHTML=`<div class="aft-v200-modal" onclick="event.stopPropagation()"><div class="aft-v200-modal-head"><div><h2>✅ Проверка присутствующих судей</h2><p>Отметьте судей, которые фактически присутствуют на выбранный боевой день. Только после подтверждения и распределения система допускает судейские документы.</p></div><button type="button" class="aft-v200-close" onclick="return window.aftV200JudgePresenceAction('close',event)">Закрыть</button></div><div id="aftV200PresenceBody" class="aft-v200-modal-body"></div></div>`;
+    wrap.addEventListener('click',function(e){if(e.target===wrap)aftV200CloseJudgePresenceModal();});
     document.body.appendChild(wrap);
   }
   v200RenderPresenceModal();
@@ -17991,4 +18558,4 @@ window.aftPrintRegulationA4PortraitOnePage=function(){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', setup); else setup();
 })();
 </script>
-</body></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a59519828a2c1738',t:'MTc5NDQ4MTkyNQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a59519828a2c1738',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body></html>
