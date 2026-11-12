@@ -3335,6 +3335,21 @@ let unsavedChanges=false;
 const AFT_SCHEMA_VERSION='v147';
 const MAX_UNDO_SNAPSHOTS=20;
 function bracketResultKey(key,cat=currentCategory){return String(cat||'')+'::'+String(key||'')}
+function categoryIdentityKey(v){
+ /* v499 FIX: функция отсутствовала, хотя getLegacyBracketResultIfSafe и
+    clearBracketResultsForCategory проверяли её через typeof и молча падали
+    на identity-режим String(v). Из-за этого записи, отличавшиеся регистром,
+    «ё/е» или пробелами вокруг «|», не считались одной и той же категорией
+    и не вычищались при переносе/удалении спортсмена. Нормализация только
+    для сравнения: регистр, NBSP, пробелы вокруг разделителя, «ё». */
+ return String(v==null?'':v)
+  .replace(/\u00a0/g,' ')
+  .toLowerCase()
+  .replace(/ё/g,'е')
+  .replace(/\s*\|\s*/g,' | ')
+  .replace(/\s+/g,' ')
+  .trim();
+}
 function getLegacyBracketResultIfSafe(key,cat=currentCategory){
  const legacy=bracketResults && bracketResults[key];
  if(!legacy || typeof legacy!=='object')return {};
@@ -9311,7 +9326,7 @@ function aftGenerateRegulationCore(force=false, mode=null){
      divider=`<tr class="reg-age-divider"><td colspan="${dayCount+3}">${esc(r.group)}</td></tr>`;
    }
    const cells=r.dayCells.map(c=>`<td>${c.count?c.count:'-'}</td>`).join('');
-   return `${divider}<tr>
+   return `${divider}<tr data-aft-cat="${esc(r.weight)}">
      <td>${esc(categoryWeightDisplay(r.weight))}</td>
      <td>${r.count||''}</td>
      ${cells}
@@ -9621,7 +9636,14 @@ function extractManualRegulationPlan() {
    });
    const expectedForWeight=cats.filter(c=>categoryWeightFromKey(c)===weight).reduce((s,c)=>s+Math.max(0,getCategoryAthleteIds(c).length-1),0);
    if(!dayCounts.some(Boolean) && expectedForWeight>0)return;
-   let candidates=cats.filter(c=>categoryWeightFromKey(c)===weight && v172RegGroupMatches(c,currentGroup));
+   /* v499 FIX: если строка регламента хранит точный ключ категории (data-aft-cat),
+      используем его — иначе при двух категориях с одинаковым весом (юноши 40 кг и
+      девушки 40 кг) стадии могли уехать в чужую категорию. Для старых сохранений
+      без атрибута логика подбора по весу/группе остаётся прежней. */
+   const __explicitCat=String(tr.getAttribute&&tr.getAttribute('data-aft-cat')||'').trim();
+   let candidates=(__explicitCat && cats.indexOf(__explicitCat)>=0)
+     ? [__explicitCat]
+     : cats.filter(c=>categoryWeightFromKey(c)===weight && v172RegGroupMatches(c,currentGroup));
    if(!candidates.length)candidates=cats.filter(c=>categoryWeightFromKey(c)===weight && !plan[c]);
    if(!candidates.length)candidates=cats.filter(c=>categoryWeightFromKey(c)===weight);
    const cat=candidates.find(c=>!plan[c]) || candidates[0];
@@ -13687,7 +13709,13 @@ function aftPruneOldCategoryAfterMove(oldCat,movedId){
     if(!oldKeys.has(bare)&&!newKeys.size)return;
     deleteBracketResult(bare,oldCat);stat.removed++;
   });
-  /* (в) «висячие» НК после переноса: бой ещё в сетке, но боксёр уже в другой категории */
+  /* (в) «висячие» НК после переноса: бой ещё в сетке, но боксёр уже в другой категории.
+     v499 FIX: normalizeCatKey был объявлен только как локальная const внутри
+     clearBracketResultsForCategory(), поэтому здесь возникал ReferenceError.
+     Его глушил catch(_e){}, и НК/KO перенесённого спортсмена оставались висеть
+     в медицинском отчёте (бой уже не существует / боксёр в другой категории).
+     Нормализатор объявлен локально до try — поведение остальных ветвей не меняется. */
+  const normalizeCatKey=(typeof categoryIdentityKey==='function')?categoryIdentityKey:(v=>String(v==null?'':v).trim());
   try{
     if(Array.isArray(knockoutEvents)){
       const kept=normalizeKnockoutEvents(knockoutEvents||[]).filter(e=>{
@@ -15277,6 +15305,34 @@ const AFT_JUDGE_DOCS_V190='v280-judge-documents-daily-router';
 function aftCurrentDocVersionLabel(){return String(APP_VERSION||'current')||'current'}
 function aftCurrentDocVersionFileTag(){return aftCurrentDocVersionLabel().replace(/[^a-z0-9_-]+/gi,'_').replace(/^_+|_+$/g,'')||'current'}
 let judgeDailyPresence={};
+/* v499 FIX: модуль присутствия судей (v190/v200) жил в отдельной области видимости
+   внутри основного IIFE. Внешние слои обращались к judgeDailyPresence и к функциям
+   v190* через typeof-проверки, которые всегда давали false, поэтому:
+     • v191PresenceRecord() всегда возвращал null → в «Графике назначения судейской
+       бригады» всегда печаталось «список присутствующих судей не подтверждён»;
+     • при удалении судьи графика / смене формата турнира / демо-данных присутствие
+       не сбрасывалось (Object.keys(judgeDailyPresence) не видел данных);
+     • статус «присутствие подтверждено» в составе пар всегда был false.
+   Экспорт аддитивный: внутренние ссылки продолжают работать с той же переменной,
+   а запись вида judgeDailyPresence={} снаружи попадает в setter и обновляет её. */
+try{
+  Object.defineProperty(window,'judgeDailyPresence',{
+    configurable:true,
+    enumerable:false,
+    get:function(){return judgeDailyPresence;},
+    set:function(v){judgeDailyPresence=(v&&typeof v==='object')?v:{};}
+  });
+}catch(_e){console.warn('AFT v499: cannot expose judgeDailyPresence',_e);}
+try{
+  window.v190DayKey=typeof v190DayKey==='function'?v190DayKey:undefined;
+  window.v190NormalizePresence=typeof v190NormalizePresence==='function'?v190NormalizePresence:undefined;
+  window.v190PresenceRecord=typeof v190PresenceRecord==='function'?v190PresenceRecord:undefined;
+  window.v190RenderPresencePanel=typeof v190RenderPresencePanel==='function'?v190RenderPresencePanel:undefined;
+  window.v190CurrentDayIndex=typeof v190CurrentDayIndex==='function'?v190CurrentDayIndex:undefined;
+  window.v190SetAllPresent=typeof v190SetAllPresent==='function'?v190SetAllPresent:undefined;
+  window.v190ToggleJudgePresence=typeof v190ToggleJudgePresence==='function'?v190ToggleJudgePresence:undefined;
+  window.v190ConfirmPresenceForDay=typeof v190ConfirmPresenceForDay==='function'?v190ConfirmPresenceForDay:undefined;
+}catch(_e){console.warn('AFT v499: cannot expose presence API',_e);}
 
 function v190DayKey(dayIndex){return 'day_'+String(Math.max(0,parseInt(dayIndex||0,10)||0));}
 function v190NormalizePresence(src){
@@ -17087,7 +17143,18 @@ function aftOpenSafeA4PrintPages(svgs,fileName){
  const pages=svgs.map((s,i)=>{const land=/width="1123"/.test(s.slice(0,200));return '<div class="page'+(land?' land':'')+'"'+(i<svgs.length-1?' style="page-break-after:always"':'')+'><img'+(land?' class="land"':'')+' src="'+svgToDataUri(s)+'" alt=""></div>';}).join('');
  const html='<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Регламент A4 — '+svgs.length+' листа</title><style>@page{size:210mm 297mm;margin:0}@page land{size:297mm 210mm;margin:0}html,body{margin:0;padding:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{width:210mm;height:297mm;overflow:hidden}.page.land{page:land;width:297mm;height:210mm}img{display:block;width:210mm;height:297mm}img.land{width:297mm;height:210mm}@media screen{html,body{width:100%!important;height:auto!important;overflow-x:hidden!important;background:#fff!important}.page{width:100%!important;height:auto!important;overflow:visible!important}img{width:100%!important;height:auto!important}.aft-noprint-bar{display:block!important}}@media print{.aft-noprint-bar{display:none!important}}</style></head><body><div class="aft-noprint-bar" style="display:block;position:sticky;top:0;background:#1e3a8a;padding:8px;text-align:center;z-index:9"><button onclick="window.print()" style="padding:10px 16px;border:0;border-radius:10px;background:#fff;color:#1e3a8a;font-weight:800;font-size:15px">🖨 Печать / сохранить PDF</button></div>'+pages+'<script>window.onload=function(){setTimeout(function(){window.print()},250)};<\/script></body></html>';
  const w=window.open('','_blank');
- if(w){w.document.open();w.document.write(html);w.document.close();return true;}
+ if(w){
+   /* v499 FIX: как и в остальных печатных функциях (v363), не используем
+      deprecated document.write — навигация на Blob-URL надёжнее в мобильных
+      WebView и сохраняет авто-печать из window.onload документа. */
+   try{
+     const blobUrl=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+     w.location.href=blobUrl;
+     if(typeof aftBlobWindowRevoke==='function')aftBlobWindowRevoke(blobUrl,w);
+     else setTimeout(()=>{try{URL.revokeObjectURL(blobUrl)}catch(_){}},60000);
+     return true;
+   }catch(e){console.warn('AFT v499: A4 blob navigation failed, fallback to download',e);try{w.close()}catch(_){}}
+ }
  const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);
  const a=document.createElement('a');a.href=url;a.download=fileName||('regulation_A4_'+svgs.length+'_листа.html');document.body.appendChild(a);a.click();
  setTimeout(()=>{try{a.remove();URL.revokeObjectURL(url)}catch(e){}},1500);return false;
@@ -17770,4 +17837,4 @@ window.aftPrintRegulationA4PortraitOnePage=function(){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', setup); else setup();
 })();
 </script>
-</body></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a59404573c27fa99',t:'MTc5NDQ3MDU3Mg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a59404573c27fa99',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body></html>
