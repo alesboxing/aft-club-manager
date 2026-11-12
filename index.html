@@ -8070,6 +8070,11 @@ function parseOcrApplicationRow(row,defaults){
  };
 }
 function parseOcrApplicationText(text){
+ /* v500 FIX: строки с датой вида 2011-03-12 (Excel / Google-таблицы) молча пропускались —
+    ни splitOcrApplicationRows, ни parseOcrApplicationRow такой формат не распознавали,
+    участник просто исчезал из предпросмотра без предупреждения. Приводим такие даты
+    к ДД.ММ.ГГГГ до разбора; все остальные форматы обрабатываются как раньше. */
+ text=String(text==null?'':text).replace(/\b((?:19|20)\d{2})-(\d{2})-(\d{2})\b/g,function(m,y,mo,d){return d+'.'+mo+'.'+y});
  const defaults={
    region:detectApplicationRegion(text)||'РЕГ',
    club:detectApplicationClub(text)||'',
@@ -9319,6 +9324,13 @@ function aftGenerateRegulationCore(force=false, mode=null){
  }).join('');
 
  let currentGroupName='';
+ /* v500 FIX: если один и тот же вес встречается у двух категорий (юноши 40 кг и
+    девушки 40 кг), строки печатного регламента были неотличимы. Добавляем краткую
+    пометку пола ТОЛЬКО для совпадающих весов: обычный регламент не меняется.
+    Разбор ручного плана читает вес регуляркой /\d+/ и data-aft-cat, поэтому
+    пометка не ломает обратную совместимость сохранений. */
+ const __regWeightDup={};
+ rows.forEach(r=>{const __w=categoryWeightDisplay(r.weight);__regWeightDup[__w]=(__regWeightDup[__w]||0)+1;});
  let tableRows=rows.map(r=>{
    let divider='';
    if(r.group!==currentGroupName){
@@ -9327,7 +9339,7 @@ function aftGenerateRegulationCore(force=false, mode=null){
    }
    const cells=r.dayCells.map(c=>`<td>${c.count?c.count:'-'}</td>`).join('');
    return `${divider}<tr data-aft-cat="${esc(r.weight)}">
-     <td>${esc(categoryWeightDisplay(r.weight))}</td>
+     <td>${esc(categoryWeightDisplay(r.weight))}${__regWeightDup[categoryWeightDisplay(r.weight)]>1?` <span style="color:#64748b;font-size:11px" title="${esc(categoryGenderFromKey(r.weight))}">${esc(genderShort(categoryGenderFromKey(r.weight)))}</span>`:''}</td>
      <td>${r.count||''}</td>
      ${cells}
      <td>${r.dist.total||'-'}</td>
@@ -11901,6 +11913,7 @@ function applyRegSettings(obj){
 function loadData(){
  const localRaw=readStorageKey('localStorage',STORE);
  const sessionRaw=readStorageKey('sessionStorage',MANUAL_SESSION_KEY);
+ try{aftTabNoteOwnPayload(localRaw,STORE);}catch(_){ } /* v502: своя запись не считается чужой */
  const manualCandidates=[
    {kind:'сохранение',source:'localStorage',key:STORE,raw:localRaw,time:parseBackupTime(localRaw)},
    {kind:'сессионная копия',source:'sessionStorage',key:MANUAL_SESSION_KEY,raw:sessionRaw,time:parseBackupTime(sessionRaw)}
@@ -12220,9 +12233,21 @@ function renderDiagnosticsPanel(){
  runAppHealthCheck(true);
 }
 function exportCSV(){
- let rows=[['draw_number','fio','region','weight','club','age','coach']];
- const idx={};drawOrder.forEach((id,i)=>idx[id]=i+1);
- getList().forEach(a=>rows.push([idx[a.id]||'',a.fio,a.region,a.weight,a.club,a.age,a.coach]));
+ /* v500 FIX: раньше выгружался только текущий экран (getList() фильтрует по currentCategory),
+    из-за чего в CSV попадала одна весовая категория вместо всего турнира. Теперь выгружаются
+    все участники; номер жеребьёвки берётся из сетки СВОЕЙ категории, добавлена колонка
+    category. Порядок строк — по категориям, внутри категории по ФИО. */
+ const __cats=getCats().slice();
+ const __rank=a=>{const i=__cats.indexOf(categoryKeyOf(a));return i<0?__cats.length:i};
+ const __list=(athletes||[]).slice().sort((x,y)=>__rank(x)-__rank(y)||String(x.fio||'').localeCompare(String(y.fio||''),'ru'));
+ const rows=[['draw_number','fio','region','weight','club','age','coach','category']];
+ const __idxCache={};
+ __list.forEach(a=>{
+   const cat=categoryKeyOf(a);
+   if(!__idxCache[cat]){const m={};try{(getDrawOrderForCategory(cat)||[]).forEach((id,i)=>m[id]=i+1)}catch(_){ }__idxCache[cat]=m}
+   let label='';try{label=categoryLabelFromKey(cat)}catch(_){label=cat}
+   rows.push([__idxCache[cat][a.id]||'',a.fio,a.region,a.weight,a.club,a.age,a.coach,label]);
+ });
  const csv=rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(';')).join('\n');
  downloadBlob(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),'aft_bracket_participants.csv'); showStatus('📊 CSV скачан')
 }
@@ -13194,6 +13219,24 @@ function v146PruneInvalidResultsForCategory(cat){
        removed++;
      }
    });
+   /* v500 FIX: цикл выше проверяет только бои, которые существуют ПОСЛЕ изменения состава.
+      Если из-за удаления спортсмена сетка пересобралась и ключ боя исчез (r0_0 → pre_0_1),
+      его результат в bracketResults никто не проверял: оставались записи-сироты —
+      диагностика показывала «битые результаты», аудит считал лишние незакрытые бои,
+      а судейский отчёт мог тянуть старого победителя. Перенос спортсмена этой проблемы
+      не давал (ключи сетки сохранялись), поэтому дефект проявлялся только при удалении.
+      Условие matches.length защищает случай, когда сетки ещё нет и все ключи были бы
+      «мёртвыми». Легаси-ключи без префикса категории не трогаем. */
+   if(matches.length){
+     const __liveKeys=new Set(matches.map(m=>m.key));
+     const __catPrefix=String(cat)+'::';
+     Object.keys(bracketResults||{}).forEach(k=>{
+       if(String(k).indexOf(__catPrefix)!==0)return;
+       if(__liveKeys.has(String(k).slice(__catPrefix.length)))return;
+       deleteBracketResult(String(k).slice(__catPrefix.length),cat); /* v222: вместе с НК/KO */
+       removed++;
+     });
+   }
  }catch(e){console.warn('v146PruneInvalidResultsForCategory',cat,e)}
  return removed;
 }
@@ -13983,7 +14026,12 @@ function commitPairWinnerFromMatch(m,side,score){
  if(!redId || !blueId)return {ok:false,msg:'Сначала нужно определить победителей предыдущих боёв'};
  const winnerId=side==='red'?redId:blueId;
  const winner=getA(winnerId);
- score=v146EnsureRscRound((score||aftDefaultWp()).trim()||aftDefaultWp());
+ score=String(score||'').trim()||aftDefaultWp();
+ /* v500 FIX: «5-0» без WP сохранялся как есть и попадал в сетку/протоколы в нестандартном
+    виде (чипы WP в окне выбора счёта фильтруются по /^WP/, отчёт печатал «5-0» вместо
+    «WP 5-0»). Приводим к каноническому виду до проверки на число боковых судей. */
+ if(/^\d\s*[-:]\s*\d$/.test(score))score='WP '+score.replace(/\s*:\s*/,'-');
+ score=v146EnsureRscRound(score);
  {const _se=aftScoreError(score);if(_se)return {ok:false,msg:_se}} /* v471 */
  setBracketResult(m.key,{winnerId,score,redId,blueId,side,category:cat,updatedAt:Date.now()},cat);
  return {ok:true,winnerId,winnerName:winner?winner.fio:'спортсмен',score,category:cat};
@@ -14232,11 +14280,13 @@ function writeAutoSavePayload(payload){
  }
 }
 function flushAutoSaveNow(reason='flush'){
+ if(!aftTabCanWrite('auto'))return false; /* v501 */
  let payload='';
  try{
    payload=JSON.stringify(buildBackupData({autosave:true,autosaveReason:reason,autosavedAt:new Date().toISOString(),perfMode:'v148'}));
    aftIdbMirror(payload,'autosave');
    writeAutoSavePayload(payload);
+   try{aftTabNoteOwnPayload(localStorage.getItem(STORE+'_AUTOSAVE'),STORE+'_AUTOSAVE');}catch(_){ } /* v502 */
    __v148PerfStats.autosaves++;
    return true;
  }catch(e){
@@ -14275,6 +14325,108 @@ function aftShouldSkipEmptyWrite(payload){
  if(n>0)return false;
  return aftStoredHasAthletes();
 }
+/* v501 FIX: защита от «слепой» перезаписи при работе в двух вкладках.
+   Вкладка, получившая storage-событие от чужой записи, помечается как устаревшая:
+   запись из неё приостанавливается, сверху появляется панель с выбором —
+   загрузить свежие данные или осознанно сохранить данные этой вкладки.
+   Существующая логика сохранения (квоты, резервные копии, IndexedDB) не менялась. */
+window.__aftTabStale=false;
+window.__aftTabForceWrite=false;
+window.__aftTabStaleAt=0;
+function aftTabIsStale(){return window.__aftTabStale===true}
+function aftTabCanWrite(kind){
+ if(!aftTabIsStale())return true;
+ if(window.__aftTabForceWrite){window.__aftTabForceWrite=false;window.__aftTabStale=false;aftTabSyncBanner(false);return true}
+ try{showStatus('⚠️ Сохранение приостановлено: данные изменены в другой вкладке. Выберите «Загрузить свежие» или «Сохранить мои всё равно» в панели сверху.',true)}catch(_){ }
+ aftTabSyncBanner(true);
+ return false;
+}
+function aftTabMarkStale(){
+ if(aftTabIsStale())return;
+ window.__aftTabStale=true;window.__aftTabStaleAt=Date.now();
+ aftTabSyncBanner(true);
+ try{showStatus('⚠️ Данные изменены в другой вкладке. Свежие данные можно загрузить кнопкой в панели сверху.',true)}catch(_){ }
+}
+function aftTabReloadFromStorage(){
+ window.__aftTabStale=false;window.__aftTabForceWrite=false;aftTabSyncBanner(false);
+ try{loadData();showStatus('📥 Загружены данные, сохранённые в другой вкладке.');}
+ catch(e){showStatus('❌ Не удалось загрузить данные: '+e.message,true)}
+}
+function aftTabOverwrite(){
+ window.__aftTabForceWrite=true;window.__aftTabStale=false;aftTabSyncBanner(false);
+ let ok=false;try{ok=saveData(false)!==false}catch(e){ok=false}
+ showStatus(ok?'💾 Данные этой вкладки сохранены поверх версии из другой вкладки.':'❌ Сохранение не удалось',!ok);
+}
+function aftTabSyncBanner(show){
+ try{
+   let el=document.getElementById('aftTabSyncBanner');
+   if(!show){if(el&&el.parentNode)el.parentNode.removeChild(el);return}
+   if(el)return;
+   el=document.createElement('div');
+   el.id='aftTabSyncBanner';
+   el.setAttribute('role','alert');
+   el.style.cssText='position:fixed;z-index:99999;left:50%;transform:translateX(-50%);top:10px;max-width:min(720px,94vw);background:#fff7ed;border:2px solid #ea580c;border-radius:10px;padding:10px 14px;font:600 13px/1.35 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#7c2d12;box-shadow:0 8px 24px rgba(0,0,0,.18)';
+   el.innerHTML='<div style="margin-bottom:7px">⚠️ Турнир изменён в другой вкладке: эта вкладка показывает устаревшие данные, запись приостановлена.</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="aftTabReloadFromStorage()" style="cursor:pointer;border:0;border-radius:7px;padding:7px 12px;font:700 12.5px inherit;background:#0f766e;color:#fff">📥 Загрузить свежие данные</button><button type="button" onclick="aftTabOverwrite()" style="cursor:pointer;border:1px solid #ea580c;border-radius:7px;padding:7px 12px;font:700 12.5px inherit;background:#fff;color:#9a3412">💾 Сохранить мои всё равно</button></div>';
+   document.body.appendChild(el);
+ }catch(_){ }
+}
+window.__aftKnownPayloads={};
+window.__aftTabOpenedAt=Date.now();
+window.__aftOwnSignatures={};
+function aftTabNoteOwnPayload(v,key){
+ try{
+   if(v==null)return;
+   const s=String(v);
+   window.__aftKnownPayloads[key||STORE]=s;
+   const sig=aftTabSignature(s);
+   if(sig)window.__aftOwnSignatures[sig]=true;
+ }catch(_){ }
+}
+function aftTabSignature(raw){
+ /* v503: сравнение по СОДЕРЖИМОМУ, а не по строке: автосохранение соседней вкладки
+    с теми же участниками и результатами — это не конфликт, а те же данные. */
+ try{
+   const o=(typeof raw==='string')?JSON.parse(raw):raw;
+   if(!o||typeof o!=='object')return '';
+   const ath=Array.isArray(o.athletes)?o.athletes:[];
+   const ids=ath.map(a=>String((a&&a.id)||'')+''+String((a&&a.fio)||'')).join('');
+   const res=(o.bracketResults&&typeof o.bracketResults==='object')?Object.keys(o.bracketResults).length:0;
+   const draws=(o.categoryDrawOrders&&typeof o.categoryDrawOrders==='object')?Object.keys(o.categoryDrawOrders).length:0;
+   const ko=Array.isArray(o.knockoutEvents)?o.knockoutEvents.length:0;
+   const reg=String(o.manualRegulationHTML||'').length;
+   return ath.length+'|'+res+'|'+draws+'|'+ko+'|'+reg+'|'+ids;
+ }catch(_){return ''}
+}
+function aftTabIsOwnValue(v){
+ try{
+   const s=String(v==null?'':v);
+   if(!s)return false;
+   const own=window.__aftKnownPayloads||{};
+   for(const k in own){if(own[k]===s)return true}
+   const sig=aftTabSignature(s);
+   if(sig&&window.__aftOwnSignatures&&window.__aftOwnSignatures[sig]===true)return true;
+ }catch(_){ }
+ return false;
+}
+try{ /* снимок того, что уже лежит в хранилище на момент открытия вкладки */
+  aftTabNoteOwnPayload(localStorage.getItem(STORE),STORE);
+  aftTabNoteOwnPayload(localStorage.getItem(LAST_GOOD_KEY),LAST_GOOD_KEY);
+  aftTabNoteOwnPayload(localStorage.getItem(STORE+'_AUTOSAVE'),STORE+'_AUTOSAVE');
+}catch(_){ }
+window.addEventListener('storage',function(e){
+ try{
+   if(!e||!e.key)return;
+   const k=String(e.key);
+   if(k!==STORE&&k!==LAST_GOOD_KEY&&k.indexOf(STORE+'_AUTOSAVE')!==0)return;
+   if(e.newValue==null)return;
+   /* v502 FIX: событие приходит и от собственной записи (автосохранение предыдущего
+      документа при перезагрузке, обычное сохранение этой же вкладки). Считаем «чужой»
+      правкой только значение, которого эта вкладка ещё не знает; первые две секунды
+      после открытия вкладки правок пользователя быть не может — не тревожим его. */
+   if(aftTabIsOwnValue(e.newValue))return;
+   aftTabMarkStale();
+ }catch(_){ }
+});
 function saveData(show=true){
  try{aftFreezeDrawnCategories()}catch(_){ } /* v473 */
  let payload='';
@@ -14282,6 +14434,7 @@ function saveData(show=true){
    v148InvalidateCaches();
    payload=JSON.stringify(buildBackupData({savedBy:'v148-performance-save'}));
    if(aftShouldSkipEmptyWrite(payload))return false;
+   if(!aftTabCanWrite('manual'))return false; /* v501: вкладка устарела — не затираем чужую запись */
    aftIdbMirror(payload,'manual',true);
    let localSaved=false, sessionSaved=false, storageError=null;
    const __plan=aftStoragePlan(payload.length); /* v395 */
@@ -14301,6 +14454,7 @@ function saveData(show=true){
      try{localStorage.removeItem(LAST_GOOD_KEY)}catch(_){ } try{sessionStorage.removeItem(LAST_GOOD_KEY)}catch(_){ }
    }
    if(!localSaved && !sessionSaved)throw storageError||new Error('storage unavailable');
+   try{aftTabNoteOwnPayload(payload,STORE);aftTabNoteOwnPayload(localStorage.getItem(LAST_GOOD_KEY),LAST_GOOD_KEY);}catch(_){ } /* v502 */
    __v148PerfStats.manualSaves++;
    unsavedChanges=false;
    updateUnsavedIndicator();
@@ -14878,7 +15032,7 @@ window.applyManualPairsOrder=applyManualPairsOrder;
 window.resetPairsFiltersAndRegenerate=resetPairsFiltersAndRegenerate;
 window.goToFirstPairsDayWithMatches=goToFirstPairsDayWithMatches;
 
-window.showStatus=showStatus;window.autoAssignJudgesForSelectedDay=autoAssignJudgesForSelectedDay;window.autoAssignJudgesForAllDays=autoAssignJudgesForAllDays;window.clearJudgeAssignments=clearJudgeAssignments;window.previewOfficialDoc=previewOfficialDoc;window.refreshDocumentsPreviewFromPassport=refreshDocumentsPreviewFromPassport;window.printOfficialDoc=printOfficialDoc;window.downloadOfficialDoc=downloadOfficialDoc;window.printOfficialDocPack=printOfficialDocPack;window.downloadOfficialDocPack=downloadOfficialDocPack;window.renderDocumentsDesk=renderDocumentsDesk;window.renderBracket=renderBracket;window.setJudgingTab=setJudgingTab;window.renderJudgingPanel=renderJudgingPanel;window.addJudgeRow=addJudgeRow;window.duplicateJudgeRole=duplicateJudgeRole;window.deleteJudgeRow=deleteJudgeRow;window.updateJudgeField=updateJudgeField;window.fillDefaultJudgingPanelRows=fillDefaultJudgingPanelRows;window.clearEmptyJudgingPanelRows=clearEmptyJudgingPanelRows;window.buildJudgingPanelReportHTML=buildJudgingPanelReportHTML;window.openKnockoutDetailsModal=openKnockoutDetailsModal;window.closeKnockoutDetailsModal=closeKnockoutDetailsModal;window.saveKnockoutDetailsModal=saveKnockoutDetailsModal;window.updateKnockoutSuspensionPreview=updateKnockoutSuspensionPreview;window.buildKnockoutReportHTML=buildKnockoutReportHTML;window.autoRestoreLatestSavedStateOnStartup=autoRestoreLatestSavedStateOnStartup;window.flushAutoSaveNow=flushAutoSaveNow;window.clearOcrImport=clearOcrImport;window.previewOcrPhoto=previewOcrPhoto;window.recognizeApplicationPhoto=recognizeApplicationPhoto;window.parseApplicationTextToPreview=parseApplicationTextToPreview;window.importOcrPreview=importOcrPreview;window.removeOcrPreviewRow=removeOcrPreviewRow;window.genderShort=genderShort;window.restoreAutoSave=restoreAutoSave;window.quickValidate=quickValidate;window.printBoxerCard=printBoxerCard;window.printLastAddedBoxer=printLastAddedBoxer;window.searchAthletes=searchAthletes;window.clearAthleteSearch=clearAthleteSearch;window.goToAthleteCategory=goToAthleteCategory;window.toggleAthleteGender=toggleAthleteGender;window.renderAgeSettings=renderAgeSettings;window.saveAgeSettings=saveAgeSettings;window.addAgeGroupSetting=addAgeGroupSetting;window.deleteAgeGroupSetting=deleteAgeGroupSetting;window.resetAgeSettings=resetAgeSettings;window.switchGenderCategory=switchGenderCategory;window.switchAgeCategory=switchAgeCategory;window.formatWeightInput=formatWeightInput;window.initBirthYearSelect=initBirthYearSelect;window.updateAgeGroupPreview=updateAgeGroupPreview;window.showPanel=showPanel;window.navTo=navTo;window.closeMobileSidebar=closeMobileSidebar;window.toggleMobileSidebar=toggleMobileSidebar;window.aftGoBack=aftGoBack;window.aftPushViewState=aftPushViewState;window.aftInstallPanelBackButtons=aftInstallPanelBackButtons;window.toggleHelpMode=toggleHelpMode;window.initHelpMode=initHelpMode;window.normalizeAppState=normalizeAppState;window.runAppHealthCheck=runAppHealthCheck;window.sortAthletes=sortAthletes;window.toggleAthleteSelection=toggleAthleteSelection;window.toggleSelectAllVisible=toggleSelectAllVisible;window.selectAllVisibleAthletes=selectAllVisibleAthletes;window.clearSelectedAthletes=clearSelectedAthletes;window.bulkMoveAthletes=bulkMoveAthletes;window.moveAthlete=moveAthlete;window.generateRegulation=generateRegulation;window.generateStandardRegulation=generateStandardRegulation;window.generateBalancedRegulation=generateBalancedRegulation;window.applyOfficialRulesToAgeSettings=applyOfficialRulesToAgeSettings;window.applyOfficialTournamentWeightTable=applyOfficialTournamentWeightTable;window.onOfficialWeightModeChange=onOfficialWeightModeChange;window.setOfficialWeightMode=setOfficialWeightMode;window.isOfficialWeightModeEnabled=isOfficialWeightModeEnabled;window.updateAgeGroupOfficialWeightDisplay=updateAgeGroupOfficialWeightDisplay;window.rememberAgeSettingsManualWeightDraft=rememberAgeSettingsManualWeightDraft;window.updateAgeRuleProfileDisplay=updateAgeRuleProfileDisplay;window.applyRuleLevelToAgeSettings=applyRuleLevelToAgeSettings;window.updateAgeRuleDefaults=updateAgeRuleDefaults;window.getAgeSettingsDraftGroups=getAgeSettingsDraftGroups;window.readAgeSettingsRowsFromTable=readAgeSettingsRowsFromTable;window.syncRuleLevelFromRegulation=syncRuleLevelFromRegulation;window.syncRuleLevelFromTournamentPassport=syncRuleLevelFromTournamentPassport;window.enableRegulationEdit=enableRegulationEdit;window.lockRegulationEdits=lockRegulationEdits;window.resetManualRegulation=resetManualRegulation;/* v392: псевдоним базовой printRegulation */window.exportRegulationHTML=exportRegulationHTML;window.printAllBracketsPDF=printAllBracketsPDF;window.printCurrentBracketPDF=printCurrentBracketPDF;window.swapDrawNumbers=swapDrawNumbers;window.showAllDraws=showAllDraws;window.toggleDrawAgeGroup=toggleDrawAgeGroup;window.selectDrawOverviewCategory=selectDrawOverviewCategory;window.renderAllDrawsOverview=renderAllDrawsOverview;window.openDrawCategory=openDrawCategory;window.drawCategoryFromOverview=drawCategoryFromOverview;window.drawAllCategories=drawAllCategories;window.generateNextPairsDay=generateNextPairsDay;window.refreshPairsCompositionOnly=refreshPairsCompositionOnly;window.autoFillTestPairWinnersForCurrentDay=autoFillTestPairWinnersForCurrentDay;window.openPairScorePicker=openPairScorePicker;window.closePairScorePicker=closePairScorePicker;window.confirmPairWinnerScore=confirmPairWinnerScore;window.setPairWinner=setPairWinner;window.syncBracketAfterPairWinner=syncBracketAfterPairWinner;window.countUnresolvedMatchesForCategory=countUnresolvedMatchesForCategory;window.countAllUnresolvedMatches=countAllUnresolvedMatches;window.getCategoryCompletionSummary=getCategoryCompletionSummary;window.normalizeStoredResultForMatch=normalizeStoredResultForMatch;window.inferMissingWinnersFromNextRounds=inferMissingWinnersFromNextRounds;window.repairBracketResultsForCategory=repairBracketResultsForCategory;window.repairAllBracketResults=repairAllBracketResults;window.generateJudgeReport=generateJudgeReport;window.printJudgeReport=printJudgeReport;window.printJudgeReportMainOnly=printJudgeReportMainOnly;window.printJudgeReportBracketsOnly=printJudgeReportBracketsOnly;window.exportJudgeReportHTML=exportJudgeReportHTML;window.generatePairsComposition=generatePairsComposition;window.printPairsComposition=printPairsComposition;window.printAllPairsDays=printAllPairsDays;window.exportPairsHTML=exportPairsHTML;window.refreshPairsDaySelect=refreshPairsDaySelect;window.addAthlete=addAthlete;window.renameAthlete=renameAthlete;window.editAthlete=editAthlete;window.deleteAthlete=deleteAthlete;window.importList=importList;window.fillDemo=fillDemo;window.performDraw=performDraw;window.switchCategory=switchCategory;window.saveData=saveData;window.loadData=loadData;window.clearAll=clearAll;window.exportJSON=exportJSON;window.importJSON=importJSON;window.exportCSV=exportCSV;window.buildCurrentBracketPrintDoc=buildCurrentBracketPrintDoc;window.printBracket=printBracket;window.dedupeOcrPreviewRows=dedupeOcrPreviewRows;window.validateOcrPreviewRows=validateOcrPreviewRows;window.addOcrPreviewRow=addOcrPreviewRow;window.toggleTestMode=toggleTestMode;window.confirmRscRound=confirmRscRound;window.showRscRoundModal=showRscRoundModal;window.toggleTestModeWithFeedback=toggleTestModeWithFeedback;window.autoFillTestPairWinnersForAllDays=autoFillTestPairWinnersForAllDays;window.generateTestResults=generateTestResults;window.clearFightResultsOnly=clearFightResultsOnly;window.renderPairsAuditQuickBox=renderPairsAuditQuickBox;window.runTournamentAudit=runTournamentAudit;window.collectTournamentAudit=collectTournamentAudit;window.auditNavigate=auditNavigate;window.renderDiagnosticsPanel=renderDiagnosticsPanel;window.downloadActionLog=downloadActionLog;window.undoLastAction=undoLastAction;window.filterPairsForUI=filterPairsForUI;window.refreshPairsFilters=refreshPairsFilters;window.renderTournamentPassport=renderTournamentPassport;window.saveTournamentPassport=saveTournamentPassport;window.createNewTournament=createNewTournament;window.fillDemoTournamentPassport=fillDemoTournamentPassport;window.goFromTournamentToEntry=goFromTournamentToEntry;window.updateTournamentDatePreview=updateTournamentDatePreview;window.onTournamentModeChange=onTournamentModeChange;window.updateTournamentModeUI=updateTournamentModeUI;window.renderUnmatchedAthletes=renderUnmatchedAthletes;window.downloadEmergencyBackup=downloadEmergencyBackup;window.restoreLatestBackup=restoreLatestBackup;
+window.showStatus=showStatus;window.autoAssignJudgesForSelectedDay=autoAssignJudgesForSelectedDay;window.autoAssignJudgesForAllDays=autoAssignJudgesForAllDays;window.clearJudgeAssignments=clearJudgeAssignments;window.previewOfficialDoc=previewOfficialDoc;window.refreshDocumentsPreviewFromPassport=refreshDocumentsPreviewFromPassport;window.printOfficialDoc=printOfficialDoc;window.downloadOfficialDoc=downloadOfficialDoc;window.printOfficialDocPack=printOfficialDocPack;window.downloadOfficialDocPack=downloadOfficialDocPack;window.renderDocumentsDesk=renderDocumentsDesk;window.renderBracket=renderBracket;window.setJudgingTab=setJudgingTab;window.renderJudgingPanel=renderJudgingPanel;window.addJudgeRow=addJudgeRow;window.duplicateJudgeRole=duplicateJudgeRole;window.deleteJudgeRow=deleteJudgeRow;window.updateJudgeField=updateJudgeField;window.fillDefaultJudgingPanelRows=fillDefaultJudgingPanelRows;window.clearEmptyJudgingPanelRows=clearEmptyJudgingPanelRows;window.buildJudgingPanelReportHTML=buildJudgingPanelReportHTML;window.openKnockoutDetailsModal=openKnockoutDetailsModal;window.closeKnockoutDetailsModal=closeKnockoutDetailsModal;window.saveKnockoutDetailsModal=saveKnockoutDetailsModal;window.updateKnockoutSuspensionPreview=updateKnockoutSuspensionPreview;window.buildKnockoutReportHTML=buildKnockoutReportHTML;window.autoRestoreLatestSavedStateOnStartup=autoRestoreLatestSavedStateOnStartup;window.flushAutoSaveNow=flushAutoSaveNow;window.clearOcrImport=clearOcrImport;window.previewOcrPhoto=previewOcrPhoto;window.recognizeApplicationPhoto=recognizeApplicationPhoto;window.parseApplicationTextToPreview=parseApplicationTextToPreview;window.importOcrPreview=importOcrPreview;window.removeOcrPreviewRow=removeOcrPreviewRow;window.genderShort=genderShort;window.restoreAutoSave=restoreAutoSave;window.quickValidate=quickValidate;window.printBoxerCard=printBoxerCard;window.printLastAddedBoxer=printLastAddedBoxer;window.searchAthletes=searchAthletes;window.clearAthleteSearch=clearAthleteSearch;window.goToAthleteCategory=goToAthleteCategory;window.toggleAthleteGender=toggleAthleteGender;window.renderAgeSettings=renderAgeSettings;window.saveAgeSettings=saveAgeSettings;window.addAgeGroupSetting=addAgeGroupSetting;window.deleteAgeGroupSetting=deleteAgeGroupSetting;window.resetAgeSettings=resetAgeSettings;window.switchGenderCategory=switchGenderCategory;window.switchAgeCategory=switchAgeCategory;window.formatWeightInput=formatWeightInput;window.initBirthYearSelect=initBirthYearSelect;window.updateAgeGroupPreview=updateAgeGroupPreview;window.showPanel=showPanel;window.navTo=navTo;window.closeMobileSidebar=closeMobileSidebar;window.toggleMobileSidebar=toggleMobileSidebar;window.aftGoBack=aftGoBack;window.aftPushViewState=aftPushViewState;window.aftInstallPanelBackButtons=aftInstallPanelBackButtons;window.toggleHelpMode=toggleHelpMode;window.initHelpMode=initHelpMode;window.normalizeAppState=normalizeAppState;window.runAppHealthCheck=runAppHealthCheck;window.sortAthletes=sortAthletes;window.toggleAthleteSelection=toggleAthleteSelection;window.toggleSelectAllVisible=toggleSelectAllVisible;window.selectAllVisibleAthletes=selectAllVisibleAthletes;window.clearSelectedAthletes=clearSelectedAthletes;window.bulkMoveAthletes=bulkMoveAthletes;window.moveAthlete=moveAthlete;window.generateRegulation=generateRegulation;window.generateStandardRegulation=generateStandardRegulation;window.generateBalancedRegulation=generateBalancedRegulation;window.applyOfficialRulesToAgeSettings=applyOfficialRulesToAgeSettings;window.applyOfficialTournamentWeightTable=applyOfficialTournamentWeightTable;window.onOfficialWeightModeChange=onOfficialWeightModeChange;window.setOfficialWeightMode=setOfficialWeightMode;window.isOfficialWeightModeEnabled=isOfficialWeightModeEnabled;window.updateAgeGroupOfficialWeightDisplay=updateAgeGroupOfficialWeightDisplay;window.rememberAgeSettingsManualWeightDraft=rememberAgeSettingsManualWeightDraft;window.updateAgeRuleProfileDisplay=updateAgeRuleProfileDisplay;window.applyRuleLevelToAgeSettings=applyRuleLevelToAgeSettings;window.updateAgeRuleDefaults=updateAgeRuleDefaults;window.getAgeSettingsDraftGroups=getAgeSettingsDraftGroups;window.readAgeSettingsRowsFromTable=readAgeSettingsRowsFromTable;window.syncRuleLevelFromRegulation=syncRuleLevelFromRegulation;window.syncRuleLevelFromTournamentPassport=syncRuleLevelFromTournamentPassport;window.enableRegulationEdit=enableRegulationEdit;window.lockRegulationEdits=lockRegulationEdits;window.resetManualRegulation=resetManualRegulation;/* v392: псевдоним базовой printRegulation */window.exportRegulationHTML=exportRegulationHTML;window.printAllBracketsPDF=printAllBracketsPDF;window.printCurrentBracketPDF=printCurrentBracketPDF;window.swapDrawNumbers=swapDrawNumbers;window.showAllDraws=showAllDraws;window.toggleDrawAgeGroup=toggleDrawAgeGroup;window.selectDrawOverviewCategory=selectDrawOverviewCategory;window.renderAllDrawsOverview=renderAllDrawsOverview;window.openDrawCategory=openDrawCategory;window.drawCategoryFromOverview=drawCategoryFromOverview;window.drawAllCategories=drawAllCategories;window.generateNextPairsDay=generateNextPairsDay;window.refreshPairsCompositionOnly=refreshPairsCompositionOnly;window.autoFillTestPairWinnersForCurrentDay=autoFillTestPairWinnersForCurrentDay;window.openPairScorePicker=openPairScorePicker;window.closePairScorePicker=closePairScorePicker;window.confirmPairWinnerScore=confirmPairWinnerScore;window.setPairWinner=setPairWinner;window.syncBracketAfterPairWinner=syncBracketAfterPairWinner;window.countUnresolvedMatchesForCategory=countUnresolvedMatchesForCategory;window.countAllUnresolvedMatches=countAllUnresolvedMatches;window.getCategoryCompletionSummary=getCategoryCompletionSummary;window.normalizeStoredResultForMatch=normalizeStoredResultForMatch;window.inferMissingWinnersFromNextRounds=inferMissingWinnersFromNextRounds;window.repairBracketResultsForCategory=repairBracketResultsForCategory;window.repairAllBracketResults=repairAllBracketResults;window.generateJudgeReport=generateJudgeReport;window.printJudgeReport=printJudgeReport;window.printJudgeReportMainOnly=printJudgeReportMainOnly;window.printJudgeReportBracketsOnly=printJudgeReportBracketsOnly;window.exportJudgeReportHTML=exportJudgeReportHTML;window.generatePairsComposition=generatePairsComposition;window.printPairsComposition=printPairsComposition;window.printAllPairsDays=printAllPairsDays;window.exportPairsHTML=exportPairsHTML;window.refreshPairsDaySelect=refreshPairsDaySelect;window.addAthlete=addAthlete;window.renameAthlete=renameAthlete;window.editAthlete=editAthlete;window.deleteAthlete=deleteAthlete;window.importList=importList;window.fillDemo=fillDemo;window.performDraw=performDraw;window.switchCategory=switchCategory;window.saveData=saveData;window.loadData=loadData;window.clearAll=clearAll;window.exportJSON=exportJSON;window.importJSON=importJSON;window.exportCSV=exportCSV;window.buildCurrentBracketPrintDoc=buildCurrentBracketPrintDoc;window.printBracket=printBracket;window.dedupeOcrPreviewRows=dedupeOcrPreviewRows;window.validateOcrPreviewRows=validateOcrPreviewRows;window.addOcrPreviewRow=addOcrPreviewRow;window.toggleTestMode=toggleTestMode;window.confirmRscRound=confirmRscRound;window.showRscRoundModal=showRscRoundModal;window.toggleTestModeWithFeedback=toggleTestModeWithFeedback;window.autoFillTestPairWinnersForAllDays=autoFillTestPairWinnersForAllDays;window.generateTestResults=generateTestResults;window.clearFightResultsOnly=clearFightResultsOnly;window.renderPairsAuditQuickBox=renderPairsAuditQuickBox;window.runTournamentAudit=runTournamentAudit;window.collectTournamentAudit=collectTournamentAudit;window.auditNavigate=auditNavigate;window.renderDiagnosticsPanel=renderDiagnosticsPanel;window.downloadActionLog=downloadActionLog;window.undoLastAction=undoLastAction;window.filterPairsForUI=filterPairsForUI;window.refreshPairsFilters=refreshPairsFilters;window.renderTournamentPassport=renderTournamentPassport;window.saveTournamentPassport=saveTournamentPassport;window.createNewTournament=createNewTournament;window.fillDemoTournamentPassport=fillDemoTournamentPassport;window.goFromTournamentToEntry=goFromTournamentToEntry;window.updateTournamentDatePreview=updateTournamentDatePreview;window.onTournamentModeChange=onTournamentModeChange;window.updateTournamentModeUI=updateTournamentModeUI;window.renderUnmatchedAthletes=renderUnmatchedAthletes;window.downloadEmergencyBackup=downloadEmergencyBackup;window.restoreLatestBackup=restoreLatestBackup;window.aftTabIsStale=aftTabIsStale;window.aftTabCanWrite=aftTabCanWrite;window.aftTabMarkStale=aftTabMarkStale;window.aftTabSyncBanner=aftTabSyncBanner;window.aftTabReloadFromStorage=aftTabReloadFromStorage;window.aftTabOverwrite=aftTabOverwrite;
 function setupRegulationAutoUpdate(){
  const ids=['regTournament','regPlace','regDateStart','regDateEnd','regDates','regArrival','regWeighDefault','regWeighFirst','regStartDefault','regStartFirst','regRuleLevel','pairsStartTime','pairsVenue','pairsGroupTitle','pairsChiefJudge','pairsChiefSecretary'];
  ids.forEach(id=>{
@@ -17837,4 +17991,4 @@ window.aftPrintRegulationA4PortraitOnePage=function(){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', setup); else setup();
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a59404573c27fa99',t:'MTc5NDQ3MDU3Mg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a59404573c27fa99',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body></html>
+</body></html>
