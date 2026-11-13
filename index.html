@@ -118,7 +118,7 @@ PROMPT v92 AGE CATEGORY STABILITY:
      (открываются в новых окнах через Blob-URL) — это отдельная задача на будущее. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-AFT BRACKET SYSTEM v501-mobile-ux — levels, rounds, rings, judges, 64-bracket, cascade guard, draw seed, chains, report module
+<title>AFT BRACKET SYSTEM v501-mobile-ux — levels, rounds, rings, judges, 64-bracket, cascade guard, draw seed, chains, report module</title>
 <!-- v186: автономная официальная сборка — внешние веб-шрифты не подключаются -->
 <style>
 :root{
@@ -131,7 +131,7 @@ AFT BRACKET SYSTEM v501-mobile-ux — levels, rounds, rings, judges, 64-bracket,
 body{font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overscroll-behavior-y:contain;touch-action:manipulation}
 html{overscroll-behavior-y:contain;overscroll-behavior-x:none}
 .appbar{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.04);padding:10px}
-.toast{position:fixed;left:50%;top:72px;transform:translateX(-50%);z-index:9999;min-width:280px;max-width:92vw;padding:12px 16px;border-radius:12px;font-weight:900;font-size:14px;text-align:center;box-shadow:0 12px 30px rgba(0,0,0,.18);display:none}
+.toast{position:fixed;left:50%;top:96px;transform:translateX(-50%);z-index:9999;min-width:280px;max-width:92vw;padding:12px 16px;border-radius:12px;font-weight:900;font-size:14px;text-align:center;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.18);display:none}
 .toast.ok{display:block;background:#dcfce7;color:#166534;border:1px solid #86efac}
 .toast.warn{display:block;background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
 .toolbar{max-width:1500px;margin:auto;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
@@ -2858,8 +2858,13 @@ html,body{max-width:100%;overflow-x:clip}   /* clip, а не hidden: hidden со
 .aft-day-presence-actions button{min-height:48px!important;font-size:13.5px!important;width:100%;margin:0!important}
 .aft-day-presence-actions .aft-day-presence-confirm{grid-column:1 / -1;min-height:54px!important;font-size:15px!important}
 @media(max-width:760px){
-  .aft-day-presence-panel{padding:10px!important;border-radius:14px!important}
-  .aft-day-presence-list{max-height:38vh!important;max-height:38dvh!important;grid-template-columns:1fr!important;gap:8px!important;padding-bottom:6px}
+  /* v501-fix2: на очень низких экранах (320×568) панель выше экрана — сама панель становится
+     скролл-контейнером, а подвал с кнопками остаётся sticky и видимым */
+  .aft-day-presence-panel{padding:10px!important;border-radius:14px!important;
+     max-height:calc(100dvh - 16px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+  /* v501-fix2: на узких экранах список судей считаем от высоты экрана минус шапка/статистика/кнопки,
+     чтобы панель гарантированно влезала целиком (было 38dvh — на 360×740 панель выходила на 7px) */
+  .aft-day-presence-list{max-height:38vh!important;max-height:clamp(120px,calc(100dvh - 470px),38dvh)!important;grid-template-columns:1fr!important;gap:8px!important;padding-bottom:6px}
   .aft-day-judge-row{min-height:52px;padding:10px!important}
   .aft-day-judge-row input{width:24px!important;height:24px!important}
   .aft-day-presence-head b{font-size:13px}
@@ -2890,7 +2895,11 @@ html,body{max-width:100%;overflow-x:clip}   /* clip, а не hidden: hidden со
   .crm-nav button{font-size:12.5px!important;padding:9px 9px!important;min-height:44px}
   .container{padding:8px!important}
   .panel{padding:11px 9px!important}
-  .toast{top:auto!important;bottom:calc(12px + env(safe-area-inset-bottom));min-width:0;max-width:94vw;font-size:13px;padding:10px 12px}
+  /* v501-fix3: тост на узких экранах поднимаем над нижними липкими подвалами (панель судей,
+     шторки weight/score) и делаем прозрачным для касаний — иначе он перекрывал кнопки
+     «Подтвердить присутствие» / «Сохранить» и съедал первый тап */
+  .toast{top:calc(58px + env(safe-area-inset-top))!important;bottom:auto!important;min-width:0;max-width:94vw;
+     font-size:13px;padding:10px 12px;pointer-events:none}
   #pairsSheet .pairs-table td .pair-win-btn{min-height:52px!important;font-size:14.5px!important}
 }
 /* два победителя в ряд там, где хватает места (iPhone 12+ / Android) */
@@ -10643,7 +10652,7 @@ function openKnockoutDetailsModal(eventId){
    <button class="ko-save-btn" onclick="saveKnockoutDetailsModal('${ev.id}')">Сохранить сведения о НК</button>
    <button class="pair-score-cancel" onclick="closeKnockoutDetailsModal()">Закрыть</button>
  </div>`;
- modal.onclick=closeKnockoutDetailsModal;
+ aftGuardBackdropClose(modal,closeKnockoutDetailsModal);
  document.body.appendChild(modal);
 }
 function updateKnockoutSuspensionPreview(){
@@ -10698,6 +10707,13 @@ function aftBaseKnockoutReportHTML(){
    ${reportFooter()}</div>`;
 }
 function countKnockoutsReport(){knockoutEvents=normalizeKnockoutEvents(knockoutEvents);return knockoutEvents.length;}
+/* v501-fix5: «призрачный» тап (ghost click). На тач-экране второе касание по кнопке,
+   открывшей шторку, попадает уже на её подложку и мгновенно закрывало окно — секретарь видел,
+   что окно «не открывается». Первые 350 мс подложка не закрывает окно. */
+function aftGuardBackdropClose(modal,closeFn){
+ const until=Date.now()+350;
+ modal.onclick=function(){ if(Date.now()<until)return; closeFn(); };
+}
 function closePairScorePicker(){
  const old=$('pairScoreModal');
  if(old)old.remove();
@@ -10844,7 +10860,7 @@ function openPairScorePicker(cat,key,side){
  modal.id='pairScoreModal';
  modal.className='pair-score-modal no-print-pairs';
  modal.innerHTML='<div class="pair-score-box" role="dialog" aria-modal="true" onclick="event.stopPropagation()"></div>';
- modal.onclick=closePairScorePicker;
+ aftGuardBackdropClose(modal,closePairScorePicker);
  document.body.appendChild(modal);
  aftPairScoreRender();
 }
@@ -11256,7 +11272,7 @@ function openMovePairModal(dayIndex,cat,key){
    <button class="ko-save-btn" onclick="confirmMovePairModal()">Перенести пару</button>
    <button class="pair-score-cancel" onclick="closeMovePairModal()">Отмена</button>
  </div>`;
- modal.onclick=closeMovePairModal;
+ aftGuardBackdropClose(modal,closeMovePairModal);
  document.body.appendChild(modal);
 }
 function confirmMovePairModal(){
@@ -11806,7 +11822,12 @@ function normalizeStoredResultForMatch(cat,m){
  }
  if(!fixed.redId && m.red && m.red.type==='athlete')fixed.redId=m.red.id;
  if(!fixed.blueId && m.blue && m.blue.type==='athlete')fixed.blueId=m.blue.id;
- if(fixed.winnerId || fixed.redId || fixed.blueId || fixed.score){
+ /* v501-fix6: не плодим «пустые» записи. Раньше вызов на непроведённом бое (функция идёт по ВСЕМ
+    боям категории) записывал {redId,blueId} без победителя и без счёта — при каждом сохранении
+    результата в bracketResults появлялся мусор. Теперь пишем только осмысленный результат
+    (есть победитель или счёт) либо нормализуем запись, которая уже была сохранена раньше. */
+ const _hadRecord=Object.prototype.hasOwnProperty.call(bracketResults,bracketResultKey(m.key,cat));
+ if(fixed.winnerId || fixed.score || _hadRecord){
    setBracketResult(m.key,fixed,cat);
  }
  return fixed;
@@ -14479,7 +14500,7 @@ function aftOpenWeightModal(opts){
      </div>
    </div>
  </div>`;
- modal.onclick=aftCloseWeightModal;
+ aftGuardBackdropClose(modal,aftCloseWeightModal);
  document.body.appendChild(modal);
  const inp=$('aftWeightModalInput');
  if(inp){
@@ -18786,8 +18807,13 @@ window.aftPrintRegulationA4PortraitOnePage=function(){
         if(SHEET_IDS.indexOf(t.id)<0)return;
         if(t.dataset&&t.dataset.aftBgClose==='1')return;
         t.dataset.aftBgClose='1';
+        /* v501-fix5: «призрачный» тап. Второе касание кнопки, открывшей шторку, попадает
+           на её же фон и мгновенно закрывало окно. Фон закрывает окно только спустя 350 мс
+           после открытия — палец успевает «отлепиться». */
+        t.dataset.aftBgArmedAt=String(Date.now()+350);
         t.addEventListener('click',function(e){
           if(e.target!==t)return;             /* только сам фон, не содержимое */
+          if(Date.now()<Number(t.dataset.aftBgArmedAt||0))return;
           try{
             if(t.id==='pairScoreModal'&&typeof window.closePairScorePicker==='function')window.closePairScorePicker();
             else if(t.id==='weightSelectModal'&&typeof window.aftCloseWeightModal==='function')window.aftCloseWeightModal();
