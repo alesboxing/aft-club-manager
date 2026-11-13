@@ -184,7 +184,7 @@ tr:hover td{background:#f8fafc}
 .result{position:absolute;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,.09);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:7;cursor:pointer;padding:2px 5px}
 .result:hover{outline:2px solid rgba(37,99,235,.25);border-color:#2563eb}
 .result .name{font-weight:1000;text-transform:uppercase;letter-spacing:.025em;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.result .score{font-weight:1000;color:#dc2626}.result.bye{background:#f8fafc;border-style:dashed}.result.final{background:linear-gradient(135deg,#fefce8,#fef9c3);border:2px solid #eab308}.result.bye .score{color:#475569}.result.pending{background:#f8fafc;border:1px dashed #94a3b8;box-shadow:none}.result.pending .name{color:#94a3b8;font-weight:700;font-style:italic;text-transform:none;letter-spacing:0}.result.final.pending{background:#fefce8;border:2px dashed #eab308}.result.final.pending .name{color:#a16207}.corner.rest{background:linear-gradient(135deg,#475569,#64748b)!important}.corner .crest{margin-left:auto;margin-right:6px;flex:none;font-size:7px;letter-spacing:.05em;white-space:nowrap;font-weight:900;color:#e2e8f0;background:rgba(255,255,255,.2);padding:1px 4px;border-radius:4px}.bracket-legend{position:absolute;left:70px;right:70px;top:836px;display:flex;flex-wrap:wrap;gap:4px 22px;font-size:10px;font-weight:700;color:#475569;z-index:9;line-height:1.25}.bracket-legend .lg-sw{display:inline-block;width:11px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:3px}
+.result .score{font-weight:1000;color:#dc2626}.result.bye{background:#f8fafc;border-style:dashed}.result.final{background:linear-gradient(135deg,#fefce8,#fef9c3);border:2px solid #eab308}.result.bye .score{color:#475569}.result.pending{background:#f8fafc;border:1px dashed #94a3b8;box-shadow:none}.result.pending .name{color:#94a3b8;font-weight:700;font-style:italic;text-transform:none;letter-spacing:0}.result.final.pending{background:#fefce8;border:2px dashed #eab308}.result.final.pending .name{color:#a16207}.corner.rest{background:linear-gradient(135deg,#475569,#64748b)!important}.corner .crest{margin-left:auto;margin-right:6px;flex:none;font-size:7px;letter-spacing:.05em;white-space:nowrap;font-weight:900;color:#e2e8f0;background:rgba(255,255,255,.2);padding:1px 4px;border-radius:4px}.bracket-legend{position:absolute;left:70px;right:70px;top:820px;display:flex;flex-wrap:wrap;gap:4px 22px;font-size:10px;font-weight:700;color:#475569;z-index:9;line-height:1.25}.bracket-legend .lg-sw{display:inline-block;width:11px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:3px}
 
 svg.lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
 svg.lines path{fill:none;stroke:#475569;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -3961,7 +3961,22 @@ function requireAllDrawsBeforePairs(){
 }
 
 const MAX=64, STORE='AFT_BRACKET_SYSTEM_FINAL_V1';
-const APP_VERSION='v456-bracket-halves-keys';
+/* AFT_IDENTITY: единственный источник правды по версиям. Меняете версию — правите ТОЛЬКО этот блок. */
+const AFT_IDENTITY=Object.freeze({
+  app:'v456-bracket-halves-keys',              /* APP_VERSION: печатается в doc-code документов, в health-check, в именах экспортов */
+  docsRouter:'v191-judge-documents-hard-router',/* основной генератор официальных документов (AFT_JUDGE_DOCS_V191) */
+  docsDaily:'v280-judge-documents-daily-router' /* дневной слой (AFT_JUDGE_DOCS_V190): пишется в judgeAssignments[].generator */
+});
+const APP_VERSION=AFT_IDENTITY.app;
+try{window.AFT_IDENTITY=AFT_IDENTITY}catch(e){}
+/* printfix2: печатный билд-тег. По нему в клубе сверяют распечатку с архивом сборки.
+   Значение = первые 8 символов sha256 файла без тега (двухпроходная сборка). */
+const AFT_BUILD_TAG='a22b47a5'; /* первые 8 символов sha256 файла, собранного без тега (двухпроходная сборка) */
+function aftBuildTagLabel(){return 'сборка '+AFT_BUILD_TAG}
+/* одна сводка «какая это сборка» для диагностики, отчётов и логов */
+function aftIdentityLabel(){return [AFT_IDENTITY.app,'сборка '+AFT_BUILD_TAG,'генератор '+AFT_IDENTITY.docsRouter].join(' · ')}
+try{window.aftIdentity=function(){return {app:AFT_IDENTITY.app,docsRouter:AFT_IDENTITY.docsRouter,docsDaily:AFT_IDENTITY.docsDaily,build:AFT_BUILD_TAG,label:aftIdentityLabel()}}}catch(e){}
+try{window.AFT_BUILD_TAG=AFT_BUILD_TAG}catch(e){}
 const AFT_OFFICIAL_BUILD_DATE='2026-06-15';
 const AFT_OFFICIAL_STATUS='Готово к пилотному внедрению';
 const AFT_NO_EXTERNAL_REQUESTS=true;
@@ -4788,6 +4803,17 @@ function saveTournamentPassport(show=true){
  const prevSideCount=String(prevInfo.judgingSideCount||'5');
  const nextSideCount=String(nextInfo.judgingSideCount||'5');
  const judgingFormatChanged=prevSideCount!==nextSideCount;
+  /* printfix2: смена формата судейства очищает назначения и сбрасывает подтверждение присутствия.
+     Спрашиваем ДО сохранения: постфактум в строке статуса этого никто не читает. */
+  if(judgingFormatChanged){
+    const __fmtMsg='Формат судейства меняется с '+prevSideCount+' на '+nextSideCount+' боковых.\n\n'
+      +'Назначения судей по дням и подтверждение присутствия будут очищены — их придётся сделать заново.\n\n'
+      +'Продолжить?';
+    if(!confirm(__fmtMsg)){
+      try{const __fmtEl=$('tmJudgingSideCount');if(__fmtEl)__fmtEl.value=prevSideCount;}catch(e){}
+      return false;
+    }
+  }
  const prevFightDayCount=getFightDayCountForTournamentInfo(prevInfo);
  const nextFightDayCount=getFightDayCountForTournamentInfo(nextInfo);
  const fightDayCountChanged=prevFightDayCount!==nextFightDayCount;
@@ -5316,13 +5342,13 @@ function athleteCardDocHTML(){return docPageClass(true,`<div class="athlete-card
 /* v387: удалена устаревшая версия firstAssignedMatchForOfficialDocs — переопределена ниже, прежнее тело не использовалось */
 /* v387: удалена устаревшая версия officialAssignedJudgeNames — переопределена ниже, прежнее тело не использовалось */
 
-function scoreCardBlock(){
+function scoreCardBlock(seat=0){
   const ti=officialDocsTournamentInfo();
   const org=ti.organization||'Федерация бокса России';
   const ringDefault=String(ti.ringsCount||'').trim()==='1'?'1':'';
-  return `<div class="score-card"><div class="score-card-title">${docSafe(org)}<br>Судейская записка<small>${docSafe(ti.title||'соревнования по боксу')}</small></div><div class="official-muted official-center" style="margin:0 0 2mm">${docSafe([officialDocsPrimaryDate(ti),ti.place].filter(Boolean).join(' · '))}</div><div class="score-meta"><div>Дата ${officialFilledLine(officialDocsFirstDate(ti),20)}</div><div>Бой № ${officialLine(15)}</div><div>Ринг ${ringDefault?officialFilledLine(ringDefault,10):officialLine(10)}</div><div>Вес ${officialLine(15)}</div><div class="judge">Судья ${officialLine(70)}</div></div><div class="corners"><div class="corner-box red">КРАСНЫЙ УГОЛ<br><span class="official-muted">фамилия имя боксера - город</span></div><div class="corner-box blue">СИНИЙ УГОЛ<br><span class="official-muted">фамилия имя боксера - город</span></div></div><table class="official-table score-rounds"><tr><th>Очки красный</th><th>Раунд</th><th>Минус баллы</th><th>Очки синий</th></tr>${scoreRoundRowsHTML(r=>`<td></td><td>${r}</td><td></td><td></td>`)}<tr><td></td><td class="official-bold">Итого</td><td></td><td></td></tr></table><div class="score-footer">При равенстве очков предпочтение за бой отдано боксеру: ${officialLine(52)}<br>Подпись судьи ${officialLine(78)}</div></div>`;
+  return `<div class="score-card"><div class="score-card-title">${docSafe(org)}<br>Судейская записка<small>${docSafe(ti.title||'соревнования по боксу')}</small></div><div class="official-muted official-center" style="margin:0 0 2mm">${docSafe([officialDocsPrimaryDate(ti),ti.place].filter(Boolean).join(' · '))} · ${getJudgingSideCount()} боковых судей</div><div class="score-meta"><div>Дата ${officialFilledLine(officialDocsFirstDate(ti),20)}</div><div>Бой № ${officialLine(15)}</div><div>Ринг ${ringDefault?officialFilledLine(ringDefault,10):officialLine(10)}</div><div>Вес ${officialLine(15)}</div><div class="judge">${seat?('Судья №'+seat+' '):'Судья '}${officialLine(70)}</div></div><div class="corners"><div class="corner-box red">КРАСНЫЙ УГОЛ<br><span class="official-muted">фамилия имя боксера - город</span></div><div class="corner-box blue">СИНИЙ УГОЛ<br><span class="official-muted">фамилия имя боксера - город</span></div></div><table class="official-table score-rounds"><tr><th>Очки красный</th><th>Раунд</th><th>Минус баллы</th><th>Очки синий</th></tr>${scoreRoundRowsHTML(r=>`<td></td><td>${r}</td><td></td><td></td>`)}<tr><td></td><td class="official-bold">Итого</td><td></td><td></td></tr></table><div class="score-footer">При равенстве очков предпочтение за бой отдано боксеру: ${officialLine(52)}<br>Подпись судьи ${officialLine(78)}</div></div>`;
 }
-function scoreCardDocHTML(){return docPageClass(true,`<div class="scorecards-grid">${Array.from({length:4},scoreCardBlock).join('')}</div>`);}
+function scoreCardDocHTML(){return docPageClass(true,`<div class="scorecards-grid">${Array.from({length:getJudgingSideCount()},(_,i)=>scoreCardBlock(i+1)).join('')}</div>`);}
 function scoreRoundCardBlock(roundNo=1){
   const ti=officialDocsTournamentInfo();
   const org=ti.organization||'Федерация бокса России';
@@ -5423,6 +5449,15 @@ html,body{margin:0!important;padding:0!important;background:#fff!important;width
 .doc-kind-judgeAssignment .assign-approval .line{min-width:25mm!important;height:2.15mm!important;margin-left:2mm!important}
 .doc-kind-judgeAssignment .judge-conflict-badge{font-size:5.4px!important;padding:.7mm 1mm!important;margin-top:.5mm!important}
 .doc-kind-judgeAssignment .assign-cut{display:none!important}
+/* printfix-20261113: назначение судей — при 3 и при 5 боковых видны все судьи, подпись ТД и предупреждение о нейтралитете */
+.doc-kind-judgeAssignment .assign-slip{display:flex!important;flex-direction:column!important;justify-content:space-between!important;padding:4mm 5.4mm 1.6mm!important}
+.doc-kind-judgeAssignment .assign-slip>*{flex:0 0 auto!important}
+.doc-kind-judgeAssignment .assign-slip h3{margin:0 0 .9mm!important;line-height:1.15!important}
+.doc-kind-judgeAssignment .assign-slip>.official-muted{margin:0 0 .9mm!important;padding:0 0 .25mm!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.doc-kind-judgeAssignment .assign-slip>.official-muted.official-center{white-space:normal!important;flex:0 1 auto!important;min-height:0!important;line-height:1.2!important;max-height:3.6em!important;padding:0!important}
+.doc-kind-judgeAssignment .assign-line{margin-bottom:.9mm!important}
+.doc-kind-judgeAssignment .assign-approval{position:static!important;margin:0!important}
+.doc-kind-judgeAssignment .judge-conflict-badge{position:absolute!important;top:3.2mm!important;right:5.4mm!important;margin:0!important;line-height:1.2!important}
 </style>`;
   if(kind==='scoreCard'||kind==='scoreCardRound'){const __r=`.doc-kind-scoreCard .official-page.landscape{padding:5mm 7mm!important}
 .doc-kind-scoreCard .official-sign-footer{display:none!important}
@@ -5462,6 +5497,22 @@ ${__r.replace(/\.doc-kind-scoreCard(?![\w-])/g,'.doc-kind-scoreCardRound')}</sty
 .doc-kind-boutProtocol .codes{font-size:6.7px!important;line-height:1.22!important;margin-top:2.7mm!important}
 .doc-kind-boutProtocol .official-line{height:3.25mm!important}
 .doc-kind-boutProtocol .official-sign-footer{bottom:4mm!important;font-size:6.5px!important;padding-top:1.4mm!important}
+/* printfix-20261113: протокол боя — каждая подпись шапки стоит над своим значением; номер боя в заголовке не срезается */
+.doc-kind-boutProtocol .protocol-head{grid-template-rows:3.5mm auto 3.5mm auto!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(1){grid-area:1/1!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(2){grid-area:2/1!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(3){grid-area:1/2!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(4){grid-area:2/2!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(5){grid-area:1/3!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(6){grid-area:2/3!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(7){grid-area:3/1!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(8){grid-area:4/1!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(9){grid-area:3/2!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(10){grid-area:4/2!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(11){grid-area:3/3!important}
+.doc-kind-boutProtocol .protocol-head>:nth-child(12){grid-area:4/3!important}
+.doc-kind-boutProtocol .protocol-head>b{align-self:end!important;position:relative!important;top:1.4mm!important}
+.doc-kind-boutProtocol .official-title .official-line.official-filled{height:4.4mm!important;line-height:4.1mm!important;margin-top:-1.2mm!important}
 </style>`;
   return `<style>${commonLandscape}</style>`;
 }
@@ -5487,7 +5538,7 @@ function renderDocumentsDesk(){const res=aftRenderDocumentsDeskCore.apply(this,a
    Этот блок находится до navTo и до финального window-export. Поэтому даже старые кнопки
    «Печать», «Скачать HTML» и «Скачать комплект HTML» получают новые функции до экспорта.
 */
-const AFT_JUDGE_DOCS_V191='v191-judge-documents-hard-router';
+const AFT_JUDGE_DOCS_V191=AFT_IDENTITY.docsRouter;
 const AFT_JUDGE_DOC_KINDS_V191=['judgeSchedule','judgeAssignment','boutProtocol'];
 function v191IsJudgeDoc(kind){return AFT_JUDGE_DOC_KINDS_V191.includes(String(kind||''));}
 function v191DayKey(dayIndex){return 'day_'+String(Math.max(0,parseInt(dayIndex||0,10)||0));}
@@ -5555,7 +5606,7 @@ function v191RequireDailyDoc(kind){
   return true;
 }
 function v191DocPage(landscape=true,inner=''){
-  return `<div class="official-page ${landscape?'landscape':'portrait'}" data-aft-doc-generator="${AFT_JUDGE_DOCS_V191}"><div class="official-topline"></div><div class="doc-code">AFT DOC ${docSafe(aftCurrentDocVersionLabel())} · дневной генератор судейских документов</div>${inner}${officialDocumentSignatureFooter()}</div>`;
+  return `<div class="official-page ${landscape?'landscape':'portrait'}" data-aft-doc-generator="${AFT_JUDGE_DOCS_V191}"><div class="official-topline"></div><div class="doc-code">AFT DOC ${docSafe(aftCurrentDocVersionLabel())} · ${docSafe(typeof aftBuildTagLabel==='function'?aftBuildTagLabel():'')} · дневной генератор судейских документов</div>${inner}${officialDocumentSignatureFooter()}</div>`;
 }
 function v191AthleteLine(entry){try{return athleteLine(entry)}catch(e){return {name:'',region:''}}}
 function v191JudgeNameById(id){const j=judgeById(id);return judgeShortName(j)||'';}
@@ -5617,7 +5668,7 @@ judgeAssignmentSlip=function(m,n){
   const ringText=v191RingLabel(v191RingFromMatch(m))+ringBoutSuffix(m);
   const judgeRows=Array.from({length:getJudgingSideCount()},(_,i)=>`<div class="assign-line">Судья №${i+1}<span>${docSafe(judgeShortName(sideJudges[i])||'')}</span></div>`).join('');
   const warn=a&&(a.warnings||[]).length?`<div class="judge-conflict-badge">Проверить нейтралитет: ${(a.warnings||[]).length}</div>`:'';
-  return `<div class="assign-slip" data-aft-doc-generator="${AFT_JUDGE_DOCS_V191}"><h3>Назначение судей на бой</h3><div class="official-muted official-center" style="margin:-5mm 0 4mm;min-height:8mm"><b>${docSafe(ti.title||'')}</b><br>${docSafe(ti.place||'')}</div><div class="assign-two"><div class="assign-line">Дата${officialFilledLine(dayTitle,24)}</div><div class="assign-line">Ринг${ringText?officialFilledLine(ringText,14):officialLine(14)}</div></div><div class="assign-line">Бой №<span>${docSafe(m?(m.localNo||m.no||''):'')}</span></div><div class="official-muted" style="margin:-1mm 0 2mm">${m?`<b>Стадия:</b> ${docSafe(v191Stage(m))}<br>`:''}<b>К:</b> ${docSafe(red.name)} / ${docSafe(red.region)}<br><b>С:</b> ${docSafe(blue.name)} / ${docSafe(blue.region)}</div><div class="assign-line">Рефери<span>${docSafe(judgeShortName(ref)||'')}</span></div>${judgeRows}${warn}<div class="assign-approval">Подпись ТД / главного судьи:<span class="line">${docSafe(approver)}</span><br>Список присутствующих судей на день подтверждён. Генератор ${docSafe(aftCurrentDocVersionLabel())}.</div>${n<6?'<div class="assign-cut"></div>':''}</div>`;
+  return `<div class="assign-slip" data-aft-doc-generator="${AFT_JUDGE_DOCS_V191}"><h3>Назначение судей на бой · ${getJudgingSideCount()} боковых</h3><div class="official-muted official-center" style="margin:-5mm 0 4mm;min-height:8mm"><b>${docSafe(ti.title||'')}</b><br>${docSafe(ti.place||'')}</div><div class="assign-two"><div class="assign-line">Дата${officialFilledLine(dayTitle,24)}</div><div class="assign-line">Ринг${ringText?officialFilledLine(ringText,14):officialLine(14)}</div></div><div class="assign-line">Бой №<span>${docSafe(m?(m.localNo||m.no||''):'')}</span></div><div class="official-muted" style="margin:-1mm 0 2mm">${m?`<b>Стадия:</b> ${docSafe(v191Stage(m))}<br>`:''}<b>К:</b> ${docSafe(red.name)} / ${docSafe(red.region)}<br><b>С:</b> ${docSafe(blue.name)} / ${docSafe(blue.region)}</div><div class="assign-line">Рефери<span>${docSafe(judgeShortName(ref)||'')}</span></div>${judgeRows}${warn}<div class="assign-approval">Подпись ТД / главного судьи:<span class="line">${docSafe(approver)}</span><br>Список присутствующих судей на день подтверждён. Генератор ${docSafe(aftCurrentDocVersionLabel())}.</div>${n<6?'<div class="assign-cut"></div>':''}</div>`;
 };
 judgeAssignmentDocHTML=function(){const ctx=v191Context();const matches=ctx.matches.length?ctx.matches:[null,null,null,null,null,null];let pages='';for(let start=0;start<matches.length;start+=6){const chunk=matches.slice(start,start+6);while(chunk.length<6)chunk.push(null);pages+=v191DocPage(true,`<div class="assign-grid">${chunk.map((m,i)=>judgeAssignmentSlip(m,i+1)).join('')}</div>`);}return pages;};
 /* v419: удалено мёртвое объявление */
@@ -5919,7 +5970,7 @@ function runAppHealthCheck(render=true){
  if(render){
    const box=$('healthCheckBox');
    if(box){
-     box.innerHTML=`<div class="audit-summary ${ok?'ok':'warn'}"><b>${ok?'✅ Диагностика OK':'⚠️ Есть предупреждения'}</b><br>Версия: ${esc(APP_VERSION)} · inline onclick: ${onclickFns.length} · localStorage: ${storageOk?'OK':'ошибка'}</div>`+
+     box.innerHTML=`<div class="audit-summary ${ok?'ok':'warn'}"><b>${ok?'✅ Диагностика OK':'⚠️ Есть предупреждения'}</b><br>Версия: ${esc(APP_VERSION)}${typeof aftBuildTagLabel==='function'?' · '+esc(aftBuildTagLabel()):''}${typeof AFT_IDENTITY!=='undefined'?' · генератор '+esc(AFT_IDENTITY.docsRouter):''} · inline onclick: ${onclickFns.length} · localStorage: ${storageOk?'OK':'ошибка'}</div>`+
        (missingFns.length?`<div class="audit-list warn"><b>Нет функций:</b><br>${missingFns.map(esc).join('<br>')}</div>`:'')+
        (missingIds.length?`<div class="audit-list warn"><b>Нет DOM id:</b><br>${missingIds.map(esc).join('<br>')}</div>`:'')+
        (badResults?`<div class="audit-list warn"><b>Битые результаты:</b> ${badResults}</div>`:'')+
@@ -9151,7 +9202,7 @@ function footer(n){
 function label(x,t){return `<div class="round-label" style="left:${x}px">${esc(t)}</div>`}
 function corner(num,id,x,cy,d,rest){
  const a=getA(id)||{fio:'ФАМИЛИЯ ИМЯ',region:'РЕГ'}; let y=cy-d.h/2, cls=rest?'rest':(num%2?'red':'blue');
- const tag=rest?`<div class="crest">ОТДЫХАЕТ</div>`:'';
+ const tag=rest?`<div class="crest" style="font-size:6.5px;letter-spacing:0;padding:1px 3px;margin-right:3px">НЕТ СОПЕРНИКА</div>`:'';
  return `<div class="corner ${cls}" style="left:${x}px;top:${y}px;width:${d.w}px;height:${d.h}px"><div class="cnum" style="width:${d.nw}px;font-size:${d.nfs}px">${num}</div><div class="creg" style="width:${d.rw}px;font-size:${d.rfs}px" contenteditable="true">${esc(a.region)}</div><div class="cname" style="font-size:${d.fs}px" contenteditable="true">${esc(a.fio)}</div>${tag}</div>`
 }
 
@@ -9159,7 +9210,7 @@ function bracketLegend(hasRest){
  const sw=(bg,bd)=>`<span class="lg-sw" style="background:${bg};border:${bd||'1px solid rgba(0,0,0,.15)'}"></span>`;
  return `<div class="bracket-legend">`+
   `<span>${sw('linear-gradient(135deg,#991b1b,#dc2626)')}${sw('linear-gradient(135deg,#1e3a8a,#2563eb)')} красный и синий угол — соперники одного боя (пары стоят рядом)</span>`+
-  (hasRest?`<span>${sw('linear-gradient(135deg,#475569,#64748b)')} серый «отдыхает» — в 1-м круге боя нет, спортсмен сразу выходит дальше</span>`:'')+
+  (hasRest?`<span>${sw('linear-gradient(135deg,#475569,#64748b)')} серый «соперника нет» — в этом круге у спортсмена нет пары: участников нечётное число. Он не выбыл и не проиграл — по правилам проходит в следующий круг без боя</span>`:'')+
   `<span>${sw('#f8fafc','1px dashed #94a3b8')} «победитель боя» — бой ещё не проведён, имя и счёт появятся после него</span>`+
   `</div>`;
 }
@@ -9171,7 +9222,15 @@ function renderBracket(view){
  if(!n){sheet.innerHTML=header(0)+`<div style="position:absolute;left:125px;top:310px;font-size:22px;font-weight:900;color:#94a3b8">Добавьте участников и нажмите «Жеребить»</div>`+footer(0);return}
  if(!data)data=computeBracket();
  const leftX=n<=8?150:70, yTop=170, yBottom=820;
- const rows=Math.max(1,n), rowGap=rows<=1?80:Math.min(70,(yBottom-yTop)/(rows-1));
+ const rows=Math.max(1,n);
+ let rowGap=rows<=1?80:Math.min(70,(yBottom-yTop)/(rows-1));
+ /* v462: при плотной сетке (17+ участников, половины 33..63) последний угол уезжал под легенду (top:836)
+    и под белую полосу подвала (bottom:0,height:90). Ограничиваем шаг: низ последнего угла <= 828. */
+ const AFT_BRACKET_BOTTOM_LIMIT=816;
+ const bracketLastBottom=g=>yTop+(rows-1)*g+Math.min(21,0.41*g);
+ if(rows>1&&bracketLastBottom(rowGap)>AFT_BRACKET_BOTTOM_LIMIT){
+   rowGap=Math.min(rowGap,(AFT_BRACKET_BOTTOM_LIMIT-yTop)/(rows-1+0.41));
+ }
  const d={w:n>=17?210:n>=9?240:260,h:Math.max(16,Math.min(42,rowGap*.82)),nw:n>=17?30:36,rw:n>=17?38:46,nfs:n>=17?10:14,rfs:n>=17?8:11,fs:n>=17?8:12,rw2:n>=17?138:176,rh:n>=17?24:34,fw:n>=17?160:200,fh:n>=17?38:50,wfs:n>=17?8:11,sfs:n>=17?8:11};
  let html=header(nAll), svg='<svg class="lines" viewBox="0 0 1500 960" preserveAspectRatio="none">';
  if(n===1){
@@ -9199,7 +9258,7 @@ function renderBracket(view){
    let xPre=cols[0].x, mid=(xEnd+xPre)/2;
    for(let num=prelim*2+1;num<=n;num++){
     const id=ids[num-1], cy=yMap[num], key='bye_'+(nums?nums[num-1]:num);
-    svg+=`<path class="bye" d="M${xEnd} ${cy} H${xPre}"/>`; html+=resultBox(key,xPre,cy,d,'bye',id,'ОТДЫХАЕТ В 1-М КРУГЕ'); slots.push({cy,xEnd:xPre+d.rw2,id});
+    svg+=`<path class="bye" d="M${xEnd} ${cy} H${xPre}"/>`; html+=resultBox(key,xPre,cy,d,'bye',id,'ПРОХОДИТ ДАЛЬШЕ'); slots.push({cy,xEnd:xPre+d.rw2,id});
    }
    for(let i=1;i<=prelim*2;i+=2){
     const m=data.rounds[0][(i-1)/2], cy=(yMap[i]+yMap[i+1])/2;
@@ -9226,7 +9285,7 @@ function renderBracket(view){
       html+=resultBox(m.key,c.x,cy,d,isFinal?'final':'win',m.winner,m.score); out.push({cy,xEnd:c.x+(isFinal?d.fw:d.rw2),id:m.winner,key:m.key});
     } else {
       svg+=`<path class="${cls||'bye'}" d="M${inputXEnd} ${a.cy} H${c.x}"/>`;
-      html+=resultBox(m?m.key:'auto_'+r+'_'+i,c.x,cy,d,isFinal?'final':'bye',a.id,'ПРОХОДИТ БЕЗ БОЯ'); out.push({cy,xEnd:c.x+(isFinal?d.fw:d.rw2),id:a.id});
+      html+=resultBox(m?m.key:'auto_'+r+'_'+i,c.x,cy,d,isFinal?'final':'bye',a.id,'ПРОХОДИТ ДАЛЬШЕ'); out.push({cy,xEnd:c.x+(isFinal?d.fw:d.rw2),id:a.id});
     }
    }
    input=out; inputXEnd=c.x+(isFinal?d.fw:d.rw2);
@@ -9952,7 +10011,7 @@ function aftDisplayNoForSource(entry){
 function aftRedLine(m){
  const base=athleteLine(m.red);
  const bye=m&&m.red&&m.red.type==='athlete'&&m.blue&&m.blue.type==='winner'&&m.stage!=='pre';
- return bye?{...base,name:base.name+' — БАЙ (проход без боя)'}:base;
+ return bye?{...base,name:base.name+' — СОПЕРНИКА НЕТ, ПРОХОДИТ ДАЛЬШЕ'}:base;
 }
 function athleteLine(entry){
  if(!entry)return {name:'',region:''};
@@ -12477,7 +12536,7 @@ function aftBaseJudgeReportPrintDoc(inner){
  .creg{text-align:center;opacity:.95;flex:none}.cname{padding-right:8px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .result{position:absolute;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,.09);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:7;cursor:pointer;padding:2px 5px}
  .result .name{font-weight:1000;text-transform:uppercase;letter-spacing:.025em;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .result .score{font-weight:1000;color:#dc2626}.result.bye{background:#f8fafc;border-style:dashed}.result.final{background:linear-gradient(135deg,#fefce8,#fef9c3);border:2px solid #eab308}.result.bye .score{color:#475569}.result.pending{background:#f8fafc;border:1px dashed #94a3b8;box-shadow:none}.result.pending .name{color:#94a3b8;font-weight:700;font-style:italic;text-transform:none;letter-spacing:0}.result.final.pending{background:#fefce8;border:2px dashed #eab308}.result.final.pending .name{color:#a16207}.corner.rest{background:linear-gradient(135deg,#475569,#64748b)!important}.corner .crest{margin-left:auto;margin-right:6px;flex:none;font-size:7px;letter-spacing:.05em;white-space:nowrap;font-weight:900;color:#e2e8f0;background:rgba(255,255,255,.2);padding:1px 4px;border-radius:4px}.bracket-legend{position:absolute;left:70px;right:70px;top:836px;display:flex;flex-wrap:wrap;gap:4px 22px;font-size:10px;font-weight:700;color:#475569;z-index:9;line-height:1.25}.bracket-legend .lg-sw{display:inline-block;width:11px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:3px}
+ .result .score{font-weight:1000;color:#dc2626}.result.bye{background:#f8fafc;border-style:dashed}.result.final{background:linear-gradient(135deg,#fefce8,#fef9c3);border:2px solid #eab308}.result.bye .score{color:#475569}.result.pending{background:#f8fafc;border:1px dashed #94a3b8;box-shadow:none}.result.pending .name{color:#94a3b8;font-weight:700;font-style:italic;text-transform:none;letter-spacing:0}.result.final.pending{background:#fefce8;border:2px dashed #eab308}.result.final.pending .name{color:#a16207}.corner.rest{background:linear-gradient(135deg,#475569,#64748b)!important}.corner .crest{margin-left:auto;margin-right:6px;flex:none;font-size:7px;letter-spacing:.05em;white-space:nowrap;font-weight:900;color:#e2e8f0;background:rgba(255,255,255,.2);padding:1px 4px;border-radius:4px}.bracket-legend{position:absolute;left:70px;right:70px;top:820px;display:flex;flex-wrap:wrap;gap:4px 22px;font-size:10px;font-weight:700;color:#475569;z-index:9;line-height:1.25}.bracket-legend .lg-sw{display:inline-block;width:11px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:3px}
  
  svg.lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
  svg.lines path{fill:none;stroke:#475569;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -12701,7 +12760,7 @@ function collectTournamentAudit(){
  const seen={};
  athletes.forEach(a=>{const k=[String(a.fio||'').toLowerCase().replace(/ё/g,'е').trim(),a.birthYear||'',norm(a.weight||'')].join('|'); if(seen[k])add('warn','Похожий дубль участника',`${seen[k]} ↔ ${a.fio}`,'entry',{cat:categoryKeyOf(a)}); else seen[k]=a.fio});
  const cats=getCats();
- cats.forEach(cat=>{const n=getCategoryAthleteIds(cat).length;if(n===1)note('Категория без боя',categoryLabelFromKey(cat)+' · 1 участник — это не ошибка, боя в этой категории не будет.','draw',{cat}); else if(n<1)add('warn','Пустая категория',categoryLabelFromKey(cat),'draw',{cat})});
+ cats.forEach(cat=>{const n=getCategoryAthleteIds(cat).length;if(n===1)note('Категория с одним участником',categoryLabelFromKey(cat)+' · 1 участник — это не ошибка, боя в этой категории не будет.','draw',{cat}); else if(n<1)add('warn','Пустая категория',categoryLabelFromKey(cat),'draw',{cat})});
  getUndrawnCategories().forEach(cat=>add('critical','Категория не прожереблена',categoryLabelFromKey(cat),'draw',{cat}));
  Object.entries(categoryDrawOrders||{}).forEach(([cat,order])=>{
    const ids=getCategoryAthleteIds(cat); const idSet=new Set(ids); const o=Array.isArray(order)?order:[];
@@ -12736,6 +12795,18 @@ function collectTournamentAudit(){
  if(!jRole(jMain,'Главный судья соревнований'))add('warn','Судейская бригада: не указан главный судья','Заполните в паспорте блок «Судейская бригада».','tournament');
  if(!jRole(jMain,'Главный секретарь соревнований'))add('warn','Судейская бригада: не указан главный секретарь','Заполните в паспорте блок «Судейская бригада».','tournament');
  if(!jRefs.some(isJudgeRowFilled))add('warn','Судейская бригада: нет рефери/боковых судей','Добавьте хотя бы одного рефери или бокового судью.','tournament');
+  /* printfix2: арифметика бригады. На R рингах одновременно нужно R × (1 рефери + N боковых). */
+  try{
+    const __fmtNeed=(typeof getJudgingSideCount==='function')?getJudgingSideCount():5;
+    const __ringNeed=(typeof getRingsCount==='function')?getRingsCount():1;
+    const __sidePool=(typeof getJudgePool==='function'?getJudgePool():[]).filter(j=>{try{return (typeof judgeCanBeSide==='function')?judgeCanBeSide(j):true}catch(e){return true}}).length;
+    const __crewTotal=__ringNeed*(1+__fmtNeed);
+    if(__sidePool>0&&__sidePool<__crewTotal){
+      add('warn','Судей не хватает: рингов '+__ringNeed+', формат '+__fmtNeed+' боковых',
+        'На '+__ringNeed+' ринге(ах) одновременно нужно '+__crewTotal+' судей (1 рефери + '+__fmtNeed+' боковых на ринг), боковых в бригаде: '+__sidePool+'. Добавьте судей или переключите формат на 3 боковых в паспорте.','tournament');
+    }
+  }catch(e){}
+
  if(!jRole(jSup,'Врач'))add('warn','Судейская бригада: не указан врач','Добавьте врача во вспомогательный аппарат.','tournament');
  if(!jRole(jSup,'Судья-хронометрист'))add('warn','Судейская бригада: не указан судья-хронометрист','Добавьте судью-хронометриста во вспомогательный аппарат.','tournament');
  const allJudges=[...jMain,...jRefs,...jSup];
@@ -12956,7 +13027,7 @@ function bracketPrintVisualCSS(){
  .creg{text-align:center;opacity:.95;flex:none}.cname{padding-right:8px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .result{position:absolute;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,.09);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:7;cursor:pointer;padding:2px 5px}
  .result .name{font-weight:1000;text-transform:uppercase;letter-spacing:.025em;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .result .score{font-weight:1000;color:#dc2626}.result.bye{background:#f8fafc;border-style:dashed}.result.final{background:linear-gradient(135deg,#fefce8,#fef9c3);border:2px solid #eab308}.result.bye .score{color:#475569}.result.pending{background:#f8fafc;border:1px dashed #94a3b8;box-shadow:none}.result.pending .name{color:#94a3b8;font-weight:700;font-style:italic;text-transform:none;letter-spacing:0}.result.final.pending{background:#fefce8;border:2px dashed #eab308}.result.final.pending .name{color:#a16207}.corner.rest{background:linear-gradient(135deg,#475569,#64748b)!important}.corner .crest{margin-left:auto;margin-right:6px;flex:none;font-size:7px;letter-spacing:.05em;white-space:nowrap;font-weight:900;color:#e2e8f0;background:rgba(255,255,255,.2);padding:1px 4px;border-radius:4px}.bracket-legend{position:absolute;left:70px;right:70px;top:836px;display:flex;flex-wrap:wrap;gap:4px 22px;font-size:10px;font-weight:700;color:#475569;z-index:9;line-height:1.25}.bracket-legend .lg-sw{display:inline-block;width:11px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:3px}
+ .result .score{font-weight:1000;color:#dc2626}.result.bye{background:#f8fafc;border-style:dashed}.result.final{background:linear-gradient(135deg,#fefce8,#fef9c3);border:2px solid #eab308}.result.bye .score{color:#475569}.result.pending{background:#f8fafc;border:1px dashed #94a3b8;box-shadow:none}.result.pending .name{color:#94a3b8;font-weight:700;font-style:italic;text-transform:none;letter-spacing:0}.result.final.pending{background:#fefce8;border:2px dashed #eab308}.result.final.pending .name{color:#a16207}.corner.rest{background:linear-gradient(135deg,#475569,#64748b)!important}.corner .crest{margin-left:auto;margin-right:6px;flex:none;font-size:7px;letter-spacing:.05em;white-space:nowrap;font-weight:900;color:#e2e8f0;background:rgba(255,255,255,.2);padding:1px 4px;border-radius:4px}.bracket-legend{position:absolute;left:70px;right:70px;top:820px;display:flex;flex-wrap:wrap;gap:4px 22px;font-size:10px;font-weight:700;color:#475569;z-index:9;line-height:1.25}.bracket-legend .lg-sw{display:inline-block;width:11px;height:9px;border-radius:2px;vertical-align:-1px;margin-right:3px}
  .result.final:before{content:none!important;display:none!important}
  .result.final .winner-inside{font-size:8px;font-weight:1000;color:#a16207;letter-spacing:.06em;line-height:1.05;margin-top:1px}
  svg.lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
@@ -13559,7 +13630,7 @@ function aftSheetsSvgFrom(html,sel,override){
     const ser=new XMLSerializer().serializeToString(sec);
     const land=sec.classList.contains('report-bracket-page');
     const W=land?1123:794, H=land?794:1123;
-    const ov=land?'.report-bracket-page{width:1123px!important;height:794px!important;margin:0!important;padding:18px!important;box-sizing:border-box!important;overflow:hidden!important;transform:none!important;box-shadow:none!important;background:#fff!important}.report-bracket-page .sheet{width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;transform:none!important}.report-bracket-page{zoom:1.12!important}':override;
+    const ov=land?'.report-bracket-page{width:1123px!important;height:794px!important;margin:0!important;padding:18px!important;box-sizing:border-box!important;overflow:hidden!important;transform:none!important;box-shadow:none!important;background:#fff!important}.report-bracket-page .sheet{width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;transform:none!important}/* printfix-20261113: лист сетки в отчёте — один блок подписей, место печати не накрыто */.report-bracket-page .sheet .footer{background:transparent!important}.report-bracket-page .sheet .sign,.report-bracket-page .sheet .page{display:none!important}':override;
     return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'"><foreignObject x="0" y="0" width="'+W+'" height="'+H+'"><div xmlns="http://www.w3.org/1999/xhtml" style="width:'+W+'px;height:'+H+'px;background:#fff"><style>'+css+' '+ov+'</style>'+ser+'</div></foreignObject></svg>';
   });
 }
@@ -14006,14 +14077,22 @@ function confirmRscRound(cat, key, side, round){
 window.confirmRscRound=confirmRscRound;
 window.showRscRoundModal=showRscRoundModal;
 function v146ScoreClass(score){return /(ЯП|RSC)(?!-I)/i.test(String(score||''))?'score rsc-round':'score'}
+/* printfix2: данные не меняем — меняем только то, что видит человек.
+   «БЕЗ БОЯ» остаётся признаком в данных, но на лист не печатается. */
+function aftScoreText(score,type){
+  const s=String(score==null?'':score).trim();
+  if(!s)return '';
+  if(/^БЕЗ БОЯ$/i.test(s))return type==='bye'?'':'ЕДИНСТВЕННЫЙ В КАТЕГОРИИ';
+  return s;
+}
 function resultBox(key,x,cy,d,type,winner,score){
  /* v394: у ещё не проведённого боя нет «победителя 5-0»: серая заглушка «победитель боя», счёт показывается только после результата */
  let a=winner?getA(winner):null;
  const pending=!a && type!=='bye';
- let name=a?a.fio:(type==='bye'?'ПРОШЁЛ БЕЗ БОЯ':(type==='final'?'победитель финала':'победитель боя'));
+ let name=a?a.fio:(type==='bye'?'ПРОХОДИТ ДАЛЬШЕ':(type==='final'?'победитель финала':'победитель боя'));
  let w=type==='final'?d.fw:d.rw2, h=type==='final'?d.fh:d.rh, y=cy-h/2;
  const winnerLabel=(type==='final'&&winner)?`<div class="winner-inside">ПОБЕДИТЕЛЬ</div>`:'';
- const scoreHtml=score?`<div class="${v146ScoreClass(score)}" style="font-size:${d.sfs}px">${esc(score)}</div>`:'';
+ const scoreText=aftScoreText(score,type);const scoreHtml=scoreText?`<div class="${v146ScoreClass(score)}" style="font-size:${d.sfs}px">${esc(scoreText)}</div>`:'';
  return `<div class="result ${type==='final'?'final':type==='bye'?'bye':''}${pending?' pending':''}" data-key="${esc(key)}" style="left:${x}px;top:${y}px;width:${w}px;min-height:${h}px"><div class="name" style="font-size:${d.wfs}px">${esc(name)}</div>${winnerLabel}${scoreHtml}</div>`;
 }
 /* ===== v205: FIGHT RESULT MODAL — замена prompt() на полноценное окно ===== */
@@ -15264,9 +15343,9 @@ function renderUnmatchedAthletes(){
      lonely.push(`<tr><td>${esc(a.fio)}</td><td>${esc(a.birthYear||'—')}</td><td>${esc(a.age||'—')}</td><td>${esc(a.weight||'—')}</td><td>${esc(athleteLevelLabel(a))}</td><td>${esc(a.region||'—')}</td><td>${esc(a.coach||'—')}</td><td>${esc('нет подходящего соперника в группе '+categoryLabelFromKey(cat))}${suggestions}</td></tr>`);
    }
  });
- if(!lonely.length){box.innerHTML='<div class="unmatched-box"><h3>✅ Спортсмены без боя</h3>В неофициальном режиме одиноких категорий сейчас не найдено.</div>';return;}
+ if(!lonely.length){box.innerHTML='<div class="unmatched-box"><h3>✅ Спортсмены без соперника</h3>В неофициальном режиме одиноких категорий сейчас не найдено.</div>';return;}
  const extra=lonely.length>25?`<div style="margin-top:6px;color:#92400e;font-weight:900">Показаны первые 25 из ${lonely.length}. Полный список можно проверить в составе пар.</div>`:'';
- box.innerHTML=`<div class="unmatched-box"><h3>⚠️ Спортсмены без боя</h3><div>Система не объединяет такие пары автоматически. Организатор может согласовать объединение с тренерами и перенести спортсмена вручную.</div>${extra}<div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>ФИО</th><th>Год</th><th>Возраст</th><th>Вес</th><th>Уровень</th><th>Команда</th><th>Тренер</th><th>Причина / варианты</th></tr></thead><tbody>${lonely.slice(0,25).join('')}</tbody></table></div></div>`;
+ box.innerHTML=`<div class="unmatched-box"><h3>⚠️ Спортсмены без соперника</h3><div>Система не объединяет такие пары автоматически. Организатор может согласовать объединение с тренерами и перенести спортсмена вручную.</div>${extra}<div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>ФИО</th><th>Год</th><th>Возраст</th><th>Вес</th><th>Уровень</th><th>Команда</th><th>Тренер</th><th>Причина / варианты</th></tr></thead><tbody>${lonely.slice(0,25).join('')}</tbody></table></div></div>`;
 }
 /* v419: удалено мёртвое объявление */
 
@@ -15435,7 +15514,7 @@ function buildReportBracketPages(){
        <div class="bracket-report-head">
          <div class="bracket-report-title">${tournament}</div>
          <div class="bracket-report-sub">${place}${dates?' · '+dates:''}</div>
-         <div class="bracket-report-doc">ПРОТОКОЛ-ГРАФИК СОРЕВНОВАНИЙ · ${esc(categoryLabelFromKey(cat))}</div>
+         <div class="bracket-report-doc">ПРОТОКОЛ-ГРАФИК СОРЕВНОВАНИЙ · ${esc(categoryLabelFromKey(cat))} · СБОРКА ${esc(typeof AFT_BUILD_TAG!=='undefined'?AFT_BUILD_TAG:'')}</div>
        </div>
        <div class="report-bracket-wrap"><div class="sheet">${sheetHTML}</div></div>
        <div class="bracket-signs">
@@ -16203,7 +16282,7 @@ const AFT_REPORT_VERSION_V180='v180-judge-report-hardening';
    График назначения, карточки назначения и протокол боя строятся только новым дневным генератором:
    выбранный боевой день -> подтверждение присутствующих судей -> назначение -> печать/HTML.
 */
-const AFT_JUDGE_DOCS_V190='v280-judge-documents-daily-router';
+const AFT_JUDGE_DOCS_V190=AFT_IDENTITY.docsDaily;
 function aftCurrentDocVersionLabel(){return String(APP_VERSION||'current')||'current'}
 function aftCurrentDocVersionFileTag(){return aftCurrentDocVersionLabel().replace(/[^a-z0-9_-]+/gi,'_').replace(/^_+|_+$/g,'')||'current'}
 let judgeDailyPresence={};
@@ -16294,7 +16373,7 @@ function v190PresenceCheck(dayIndex){
  if(!pool.length)return {ok:false,msg:'В разделе «Судейская бригада» нет заполненных рефери/боковых судей.',pool,rec,present,refs,sides,need};
  if(!present.length)return {ok:false,msg:'Не отмечен ни один присутствующий судья на выбранный день.',pool,rec,present,refs,sides,need};
  if(refs.length<1)return {ok:false,msg:'Среди присутствующих судей нет судьи, который может быть рефери.',pool,rec,present,refs,sides,need};
- if(sides.length<need)return {ok:false,msg:'Недостаточно присутствующих боковых судей: нужно '+need+', отмечено '+sides.length+'.',pool,rec,present,refs,sides,need};
+ if(sides.length<need)return {ok:false,msg:'Недостаточно присутствующих боковых судей: нужно '+need+', отмечено '+sides.length+'. Переключите формат на 3 боковых в паспорте турнира или отметьте больше судей.',pool,rec,present,refs,sides,need};
  if(present.length<need+1)return {ok:false,msg:'На один бой нужно минимум '+(need+1)+' разных присутствующих судей: 1 рефери и '+need+' боковых.',pool,rec,present,refs,sides,need};
  return {ok:true,msg:'Список присутствующих судей на день можно подтвердить.',pool,rec,present,refs,sides,need};
 }
@@ -16628,7 +16707,7 @@ window.toggleJudgePresenceForDay=function(dayIndex,id,checked){return v190Toggle
 window.aftJudgeDocumentsDailyAudit=function(){const idx=v190CurrentDayIndex(),ctx=v190Context(idx),rec=v190PresenceRecord(idx,false)||{};return {version:AFT_JUDGE_DOCS_V190,selectedDayIndex:idx,date:v190DateForDay(idx),matches:ctx.matches.length,presenceConfirmed:!!rec.confirmed,presentIds:(rec.presentIds||[]).length,missingAssignments:v190MissingAssignments(idx).length,absentAssignments:v190AssignmentsWithAbsent(idx).length};};
 
 /* v190: new clean official judge documents generator */
-function v190DocPage(landscape=true,inner=''){return `<div class="official-page ${landscape?'landscape':'portrait'}" data-aft-doc-generator="${AFT_JUDGE_DOCS_V190}"><div class="official-topline"></div><div class="doc-code">AFT DOC ${docSafe(aftCurrentDocVersionLabel())} · дневной генератор судейских документов</div>${inner}${officialDocumentSignatureFooter()}</div>`;}
+function v190DocPage(landscape=true,inner=''){return `<div class="official-page ${landscape?'landscape':'portrait'}" data-aft-doc-generator="${AFT_JUDGE_DOCS_V190}"><div class="official-topline"></div><div class="doc-code">AFT DOC ${docSafe(aftCurrentDocVersionLabel())} · ${docSafe(typeof aftBuildTagLabel==='function'?aftBuildTagLabel():'')} · дневной генератор судейских документов</div>${inner}${officialDocumentSignatureFooter()}</div>`;}
 function v190Line(value,w){return officialFilledLine(value,w)}
 function v190EmptyLine(w){return officialLine(w)}
 function v190AthleteLine(entry,cat){try{return athleteLine(entry)}catch(e){return {name:'',region:''}}}
@@ -16704,7 +16783,7 @@ judgeAssignmentSlip=function(m,n){
  const presenceConfirmedNote=(v190PresenceRecord(dayIdx,false)||{}).confirmed
    ?'Список присутствующих судей на день подтверждён.'
    :'ВНИМАНИЕ: присутствие судей на день не подтверждено.';
- return `<div class="assign-slip" data-aft-doc-generator="${AFT_JUDGE_DOCS_V190}"><h3>Назначение судей на бой</h3><div class="official-muted official-center" style="margin:-5mm 0 4mm;min-height:8mm"><b>${docSafe(ti.title||'')}</b><br>${docSafe(ti.place||'')}</div><div class="assign-two"><div class="assign-line">Дата${v190Line(dayTitle,24)}</div><div class="assign-line">Ринг${ringText?v190Line(ringText,14):v190EmptyLine(14)}</div></div><div class="assign-line">Бой №<span>${docSafe(m?(m.localNo||m.no||''):'')}</span></div><div class="official-muted" style="margin:-1mm 0 2mm">${m?`<b>Стадия:</b> ${docSafe(v190Stage(m))}<br>`:''}<b>К:</b> ${docSafe(red.name)} / ${docSafe(red.region)}<br><b>С:</b> ${docSafe(blue.name)} / ${docSafe(blue.region)}</div><div class="assign-line">Рефери<span>${docSafe(judgeShortName(ref)||'')}</span></div>${judgeRows}${warn}<div class="assign-approval">Подпись ТД / главного судьи:<span class="line">${docSafe(approver)}</span><br>${docSafe(presenceConfirmedNote)} Генератор ${docSafe(aftCurrentDocVersionLabel())}.</div>${n<6?'<div class="assign-cut"></div>':''}</div>`;
+ return `<div class="assign-slip" data-aft-doc-generator="${AFT_JUDGE_DOCS_V190}"><h3>Назначение судей на бой · ${getJudgingSideCount()} боковых</h3><div class="official-muted official-center" style="margin:-5mm 0 4mm;min-height:8mm"><b>${docSafe(ti.title||'')}</b><br>${docSafe(ti.place||'')}</div><div class="assign-two"><div class="assign-line">Дата${v190Line(dayTitle,24)}</div><div class="assign-line">Ринг${ringText?v190Line(ringText,14):v190EmptyLine(14)}</div></div><div class="assign-line">Бой №<span>${docSafe(m?(m.localNo||m.no||''):'')}</span></div><div class="official-muted" style="margin:-1mm 0 2mm">${m?`<b>Стадия:</b> ${docSafe(v190Stage(m))}<br>`:''}<b>К:</b> ${docSafe(red.name)} / ${docSafe(red.region)}<br><b>С:</b> ${docSafe(blue.name)} / ${docSafe(blue.region)}</div><div class="assign-line">Рефери<span>${docSafe(judgeShortName(ref)||'')}</span></div>${judgeRows}${warn}<div class="assign-approval">Подпись ТД / главного судьи:<span class="line">${docSafe(approver)}</span><br>${docSafe(presenceConfirmedNote)} Генератор ${docSafe(aftCurrentDocVersionLabel())}.</div>${n<6?'<div class="assign-cut"></div>':''}</div>`;
 };
 judgeAssignmentDocHTML=function(){const ctx=v190Context();const matches=ctx.matches.length?ctx.matches:[null,null,null,null,null,null];let pages='';for(let start=0;start<matches.length;start+=6){const chunk=matches.slice(start,start+6);while(chunk.length<6)chunk.push(null);pages+=v190DocPage(true,`<div class="assign-grid">${chunk.map((m,i)=>judgeAssignmentSlip(m,i+1)).join('')}</div>`);}return pages;};
 /* v419: удалено мёртвое объявление */
@@ -18920,4 +18999,4 @@ window.aftPrintRegulationA4PortraitOnePage=function(){
     })();
     </script>
 
-</body></html>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5a008bf1aa45864',t:'MTc5NDU5NjU4Mg=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5a008bf1aa45864',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body></html>
